@@ -29,11 +29,11 @@ const TIENDA = {
   // ⚠️ Si aún tienes PEGA_AQUÍ, reemplázalos con los datos
   // de TU proyecto de Firebase (Configuración del proyecto).
   firebase: {
-    apiKey: "PEGA_AQUÍ",
-    authDomain: "PEGA_AQUÍ",
-    projectId: "PEGA_AQUÍ",
-    storageBucket: "PEGA_AQUÍ",
-    messagingSenderId: "PEGA_AQUÍ",
-    appId: "PEGA_AQUÍ"
+    apiKey: "AIzaSyC1vYrDNQWfJSvC_FDp485nkdXe6648uAQ",
+    authDomain: "tienda-skins.firebaseapp.com",
+    projectId: "tienda-skins",
+    storageBucket: "tienda-skins.firebasestorage.app",
+    messagingSenderId: "288741824060",
+    appId: "1:288741824060:web:056c0f5461dc2de1c25539"
   }
 };
