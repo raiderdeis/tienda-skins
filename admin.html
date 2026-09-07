@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🪡 Panel del Sastre</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🪡</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700&family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body class="pagina-admin">
+
+  <header class="cabecera">
+    <div class="cartel">
+      <div class="cuerda cuerda-izq"></div>
+      <div class="cuerda cuerda-der"></div>
+      <h1>🪡 Cámara del Sastre</h1>
+      <p>Panel privado del modista — solo para sus ojos</p>
+    </div>
+  </header>
+
+  <main class="contenido">
+
+    <!-- LOGIN -->
+    <section class="tarjeta-login" id="seccion-login">
+      <h2>🔒 Identifícate, modista</h2>
+      <form id="form-login">
+        <label>Correo (el que creaste en Firebase)</label>
+        <input type="email" id="login-correo" placeholder="sastre@reino.com" autocomplete="username">
+        <label>Contraseña</label>
+        <input type="password" id="login-clave" placeholder="••••••••" autocomplete="current-password">
+        <p class="login-error" id="login-error" hidden></p>
+        <button class="boton boton-destacado" type="submit">Entrar al atelier</button>
+      </form>
+      <p class="login-pista">💡 Creaste este correo y contraseña en el paso 3 de la guía (Firebase → Authentication).</p>
+    </section>
+
+    <!-- PANEL -->
+    <section id="seccion-panel" hidden>
+      <div class="panel-arriba">
+        <div class="estadisticas" id="estadisticas"></div>
+        <div class="panel-acciones">
+          <button class="boton" id="boton-campanita">🔔 Activar notificaciones</button>
+          <button class="boton boton-peligro" id="boton-salir">Salir 🚪</button>
+        </div>
+      </div>
+
+      <h2 class="titulo-seccion">⏳ Encargos esperando respuesta</h2>
+      <div id="lista-pendientes" class="lista-pedidos"></div>
+
+      <h2 class="titulo-seccion">📜 Historial de encargos</h2>
+      <div id="lista-historial" class="lista-pedidos"></div>
+    </section>
+
+  </main>
+
+  <div id="toasts"></div>
+
+  <script src="config.js"></script>
+  <script type="module" src="admin.js"></script>
+</body>
+</html>
