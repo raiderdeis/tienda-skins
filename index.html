@@ -21,14 +21,15 @@
     </div>
 
     <div class="pergamino-nombre">
-      <label for="input-nombre">✍️ ¿Quién anda ahí? Escribe tu nombre de Minecraft:</label>
-      <input id="input-nombre" type="text" maxlength="24" placeholder="Ej: Steve_ElValiente" autocomplete="off">
-      <p class="pista">Elige prendas → toca «Tramitar encargo» → espera la respuesta del sastre 🧵</p>
+      <label for="input-nombre">✍️ ¿Quién anda ahí? Escribe el nombre de tu personaje:</label>
+      <input id="input-nombre" type="text" maxlength="24" placeholder="Ej: Aldric el Herrero" autocomplete="off">
+      <p class="pista">Escribe tu nombre → elige una prenda → toca «Comprar» → espera al sastre 🧵 (el pago se hace dentro del juego, no aquí)</p>
     </div>
   </header>
 
   <main class="contenido">
     <nav class="categorias" id="categorias"></nav>
+    <p class="leyenda-monedas" id="leyenda-monedas"></p>
     <div class="aviso" id="aviso-pedido" hidden></div>
 
     <section class="seccion">
@@ -38,34 +39,11 @@
   </main>
 
   <footer class="pie">
-    <p>🏰 Tienda de roleplay — aquí no se gasta dinero real 💎</p>
+    <p>🏰 Tienda de roleplay — aquí no se maneja dinero real 🪙</p>
     <p>Hecho con cariño por tu modista favorito 🧵</p>
   </footer>
 
-  <!-- Barra del zurrón (carrito) -->
-  <div class="barra-zurron" id="barra-zurron">
-    <button class="zurron-info" id="boton-ver-zurron">
-      <span class="zurron-icono">🧺</span>
-      <span id="zurron-texto">0 prendas</span>
-    </button>
-    <div class="zurron-total" id="zurron-total">Total: 💎 0</div>
-    <button class="boton boton-destacado" id="boton-tramitar">Tramitar encargo</button>
-  </div>
-
-  <!-- Modal del zurrón -->
-  <div class="velo" id="velo-zurron" hidden>
-    <div class="modal">
-      <h2>Tu zurrón 🧺</h2>
-      <ul class="lista-zurron" id="lista-zurron"></ul>
-      <div class="zurron-total-modal" id="zurron-total-modal"></div>
-      <div class="modal-botones">
-        <button class="boton" id="boton-seguir">Seguir mirando</button>
-        <button class="boton boton-destacado" id="boton-tramitar-2">Tramitar encargo ✍️</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal del estado del pedido -->
+  <!-- Modal del estado del encargo -->
   <div class="velo" id="velo-pedido" hidden>
     <div class="modal" id="cuerpo-pedido"></div>
   </div>
