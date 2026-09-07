@@ -1,20 +1,45 @@
 /* =========================================================
-   EL SASTRE DEL REINO — estilos (tienda + panel)
+   EL SASTRE DEL REINO — estilos
+   ✏️ ¿Quieres cambiar los COLORES de la tienda? Edita solo
+   el bloque :root de aquí abajo. El resto déjalo quieto.
    ========================================================= */
+
+:root {
+  --pergamino: #f5e9cd;      /* fondo general (arriba) */
+  --pergamino-2: #eddfba;    /* fondo general (abajo) */
+  --papel: #fffaf0;          /* fondo de tarjetas (arriba) */
+  --papel-2: #faf1d8;        /* fondo de tarjetas (abajo) */
+  --tinta: #3b2a15;          /* texto oscuro principal */
+  --tinta-media: #5c4013;    /* texto medio */
+  --tinta-suave: #8a6c3a;    /* texto suave */
+  --oro: #c9962e;            /* dorado */
+  --oro-claro: #e7b64c;
+  --oro-oscuro: #a5791f;
+  --oro-borde: #c9a54e;
+  --oro-texto: #ffe9ae;      /* texto claro sobre madera */
+  --madera: #6f4522;
+  --madera-clara: #8a5a2b;
+  --madera-oscura: #59371a;
+  --madera-borde: #4a2e13;
+  --verde: #4e7a2a;          /* botones de aceptar */
+  --verde-claro: #b9dd7e;
+  --verde-medio: #7fae46;
+  --rojo: #a83232;           /* botones de rechazar */
+}
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 [hidden] { display: none !important; }
 
 body {
   font-family: "Baloo 2", "Comic Sans MS", cursive;
-  color: #3b2a15;
+  color: var(--tinta);
   min-height: 100vh;
   background:
     radial-gradient(ellipse at 50% -10%, rgba(255, 246, 214, .9), transparent 55%),
     repeating-linear-gradient(90deg, transparent 0 4px, rgba(122, 79, 40, .05) 4px 5px),
-    linear-gradient(180deg, #f5e9cd 0%, #eddfba 100%);
+    linear-gradient(180deg, var(--pergamino) 0%, var(--pergamino-2) 100%);
   background-attachment: fixed;
-  padding-bottom: 110px; /* espacio para la barra del zurrón */
+  padding-bottom: 24px;
 }
 
 /* ---------- Cabecera y cartel de madera ---------- */
@@ -24,38 +49,34 @@ body {
   padding: 34px 16px 10px;
   text-align: center;
 }
-
 .cartel {
   position: relative;
   display: inline-block;
   padding: 22px 40px 18px;
   background:
     repeating-linear-gradient(0deg, rgba(0,0,0,.04) 0 2px, transparent 2px 9px),
-    linear-gradient(180deg, #8a5a2b 0%, #6f4522 100%);
-  border: 5px solid #4a2e13;
+    linear-gradient(180deg, var(--madera-clara) 0%, var(--madera) 100%);
+  border: 5px solid var(--madera-borde);
   border-radius: 16px;
   box-shadow:
     inset 0 3px 0 rgba(255,255,255,.18),
     inset 0 -4px 0 rgba(0,0,0,.25),
     0 12px 24px rgba(74, 46, 19, .35);
 }
-
 .cartel h1 {
   font-family: "Cinzel Decorative", "Cinzel", serif;
   font-weight: 900;
-  color: #ffe9ae;
+  color: var(--oro-texto);
   text-shadow: 0 2px 0 #7a4f16, 0 4px 6px rgba(0,0,0,.55);
   font-size: clamp(1.4rem, 4vw, 2.3rem);
   letter-spacing: 1px;
 }
-
 .cartel p {
   color: #f3d9a4;
   font-size: .95rem;
   margin-top: 6px;
   text-shadow: 0 1px 2px rgba(0,0,0,.4);
 }
-
 .cuerda {
   position: absolute;
   top: -34px;
@@ -71,8 +92,8 @@ body {
 .pergamino-nombre {
   max-width: 520px;
   margin: 26px auto 0;
-  background: linear-gradient(180deg, #fffaf0, #f6ead0);
-  border: 3px solid #c9a54e;
+  background: linear-gradient(180deg, var(--papel), #f6ead0);
+  border: 3px solid var(--oro-borde);
   border-radius: 14px;
   padding: 14px 18px;
   box-shadow: 0 6px 14px rgba(90, 60, 20, .18);
@@ -81,32 +102,32 @@ body {
   display: block;
   font-weight: 700;
   margin-bottom: 8px;
-  color: #6b4a1e;
+  color: var(--tinta-media);
 }
 .pergamino-nombre input {
   width: 100%;
   font: inherit;
   font-size: 1.05rem;
   padding: 10px 14px;
-  border: 3px solid #a5791f;
+  border: 3px solid var(--oro-oscuro);
   border-radius: 10px;
   background: #fffdf5;
-  color: #3b2a15;
+  color: var(--tinta);
   outline: none;
   transition: box-shadow .15s, border-color .15s;
 }
 .pergamino-nombre input:focus {
-  border-color: #c9962e;
+  border-color: var(--oro);
   box-shadow: 0 0 0 4px rgba(201, 150, 46, .25);
 }
 .pista {
   margin-top: 8px;
   font-size: .82rem;
-  color: #8a6c3a;
+  color: var(--tinta-suave);
   font-weight: 600;
 }
 
-/* ---------- Categorías ---------- */
+/* ---------- Categorías y leyenda ---------- */
 .contenido { max-width: 1050px; margin: 0 auto; padding: 10px 16px 30px; }
 
 .categorias {
@@ -114,7 +135,7 @@ body {
   flex-wrap: wrap;
   gap: 10px;
   justify-content: center;
-  margin: 18px 0 10px;
+  margin: 18px 0 6px;
 }
 .chip {
   font: inherit;
@@ -124,42 +145,49 @@ body {
   border-radius: 999px;
   border: 3px solid #b98a2c;
   background: linear-gradient(180deg, #fff6dd, #f1e0b0);
-  color: #6b4a1e;
+  color: var(--tinta-media);
   cursor: pointer;
-  box-shadow: 0 3px 0 #a5791f;
+  box-shadow: 0 3px 0 var(--oro-oscuro);
   transition: transform .1s, box-shadow .1s, background .15s;
 }
-.chip:active { transform: translateY(2px); box-shadow: 0 1px 0 #a5791f; }
+.chip:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--oro-oscuro); }
 .chip.activo {
-  background: linear-gradient(180deg, #e7b64c, #c9962e);
+  background: linear-gradient(180deg, var(--oro-claro), var(--oro));
   color: #fff8e1;
   border-color: #8a621a;
   text-shadow: 0 1px 2px rgba(0,0,0,.35);
 }
 
-/* ---------- Aviso del estado del pedido ---------- */
+.leyenda-monedas {
+  text-align: center;
+  font-size: .85rem;
+  color: var(--tinta-suave);
+  font-weight: 600;
+  margin: 4px 0 8px;
+}
+
+/* ---------- Aviso ---------- */
 .aviso {
   max-width: 640px;
   margin: 10px auto;
   padding: 12px 18px;
   border-radius: 12px;
-  border: 3px solid #a5791f;
+  border: 3px solid var(--oro-oscuro);
   background: #fff6dd;
   text-align: center;
   font-weight: 700;
-  cursor: pointer;
   box-shadow: 0 4px 10px rgba(90,60,20,.15);
   animation: aparecer .3s ease;
 }
+.aviso.sin-accion { cursor: default; }
 .aviso-pendiente { color: #8a621a; }
-.aviso-aceptado { border-color: #4e7a3a; background: #e8f3dd; color: #2e5620; }
-.aviso-rechazado { border-color: #a83232; background: #f7e0e0; color: #7a1f1f; }
+.aviso-rechazado { border-color: var(--rojo); background: #f7e0e0; color: #7a1f1f; }
 
 /* ---------- Sección y rejilla ---------- */
 .titulo-seccion {
   font-family: "Cinzel", serif;
   text-align: center;
-  color: #6b4a1e;
+  color: var(--tinta-media);
   font-size: 1.35rem;
   margin: 26px 0 16px;
   letter-spacing: 2px;
@@ -172,7 +200,7 @@ body {
 .vacio {
   grid-column: 1 / -1;
   text-align: center;
-  color: #8a6c3a;
+  color: var(--tinta-suave);
   padding: 40px 10px;
   font-size: 1.05rem;
 }
@@ -180,8 +208,8 @@ body {
 /* ---------- Tarjetas ---------- */
 .tarjeta {
   position: relative;
-  background: linear-gradient(180deg, #fffaf0, #faf1d8);
-  border: 3px solid #c9a54e;
+  background: linear-gradient(180deg, var(--papel), var(--papel-2));
+  border: 3px solid var(--oro-borde);
   border-radius: 16px;
   padding: 12px 12px 14px;
   text-align: center;
@@ -192,7 +220,6 @@ body {
   transform: translateY(-5px);
   box-shadow: 0 12px 22px rgba(90,60,20,.28);
 }
-
 .cinta-nuevo {
   position: absolute;
   top: -10px;
@@ -208,7 +235,6 @@ body {
   box-shadow: 0 3px 6px rgba(0,0,0,.3);
   letter-spacing: 1px;
 }
-
 .escenario {
   position: relative;
   height: 200px;
@@ -221,7 +247,6 @@ body {
 }
 .escenario:active { cursor: grabbing; }
 .escenario canvas { width: 100%; height: 100%; display: block; }
-
 .piel-error {
   position: absolute;
   inset: 0;
@@ -234,7 +259,6 @@ body {
   color: #8a621a;
   padding: 8px;
 }
-
 .prenda-nombre {
   font-family: "Cinzel", serif;
   font-size: 1rem;
@@ -245,12 +269,25 @@ body {
   align-items: center;
   justify-content: center;
 }
-.prenda-precio {
+
+/* ---------- Precio en monedas ---------- */
+.precio-monedas {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 6px 0 8px;
+  min-height: 28px;
+}
+.moneda-badge {
+  background: #fff6dd;
+  border: 2px solid var(--oro-borde);
+  border-radius: 999px;
+  padding: 2px 10px;
   font-weight: 800;
   color: #7a5a10;
-  font-size: 1.05rem;
+  font-size: .95rem;
 }
-.prenda-precio small { font-weight: 600; color: #9a7a2a; font-size: .8rem; }
 
 /* ---------- Botones ---------- */
 .boton {
@@ -262,21 +299,21 @@ body {
   color: #5c3f12;
   padding: 9px 16px;
   cursor: pointer;
-  box-shadow: 0 4px 0 #a5791f;
+  box-shadow: 0 4px 0 var(--oro-oscuro);
   transition: transform .1s, box-shadow .1s, filter .15s;
+  text-decoration: none;
+  display: inline-block;
 }
 .boton:hover { filter: brightness(1.05); }
-.boton:active { transform: translateY(3px); box-shadow: 0 1px 0 #a5791f; }
-.boton:disabled { opacity: .55; cursor: not-allowed; }
-
+.boton:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--oro-oscuro); }
+.boton:disabled { opacity: .6; cursor: not-allowed; }
 .boton-destacado {
-  background: linear-gradient(180deg, #b9dd7e, #7fae46);
-  border-color: #4e7a2a;
+  background: linear-gradient(180deg, var(--verde-claro), var(--verde-medio));
+  border-color: var(--verde);
   color: #1d380f;
-  box-shadow: 0 4px 0 #4e7a2a;
+  box-shadow: 0 4px 0 var(--verde);
 }
-.boton-destacado:active { box-shadow: 0 1px 0 #4e7a2a; }
-
+.boton-destacado:active { box-shadow: 0 1px 0 var(--verde); }
 .boton-peligro {
   background: linear-gradient(180deg, #e89393, #c05050);
   border-color: #7a2626;
@@ -284,46 +321,15 @@ body {
   box-shadow: 0 4px 0 #7a2626;
 }
 .boton-peligro:active { box-shadow: 0 1px 0 #7a2626; }
-
-.boton-anadir { width: 100%; margin-top: 8px; }
-
-/* ---------- Barra del zurrón ---------- */
-.barra-zurron {
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 18px;
-  background: linear-gradient(180deg, #6f4522, #59371a);
-  border-top: 5px solid #c9962e;
-  box-shadow: 0 -8px 20px rgba(60,35,10,.35);
-  color: #ffe9ae;
+.boton-espera {
+  background: linear-gradient(180deg, #f2dfa5, #e3c778);
+  border-color: var(--oro-oscuro);
+  color: #7a5a10;
 }
-.zurron-info {
-  font: inherit;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 240, 200, .12);
-  border: 2px solid rgba(255, 220, 150, .4);
-  color: #ffe9ae;
-  padding: 8px 14px;
-  border-radius: 999px;
-  cursor: pointer;
-}
-.zurron-info:hover { background: rgba(255, 240, 200, .22); }
-.zurron-icono { font-size: 1.2rem; }
-.zurron-total {
-  margin-left: auto;
-  font-weight: 800;
-  font-size: 1.1rem;
-  text-shadow: 0 1px 2px rgba(0,0,0,.4);
-}
+.zona-accion { margin-top: 8px; }
+.zona-accion .boton { width: 100%; }
 
-/* ---------- Modales ---------- */
+/* ---------- Modal ---------- */
 .velo {
   position: fixed;
   inset: 0;
@@ -339,66 +345,20 @@ body {
   width: min(560px, 100%);
   max-height: 86vh;
   overflow-y: auto;
-  background: linear-gradient(180deg, #fffaf0, #f4e7c6);
-  border: 4px solid #c9a54e;
+  background: linear-gradient(180deg, var(--papel), #f4e7c6);
+  border: 4px solid var(--oro-borde);
   border-radius: 18px;
   padding: 24px;
   box-shadow: 0 20px 50px rgba(40, 22, 5, .5);
   text-align: center;
 }
-.modal h2 {
-  font-family: "Cinzel", serif;
-  color: #6b4a1e;
-  margin-bottom: 14px;
-}
-
-.lista-zurron { list-style: none; margin: 10px 0; }
-.lista-zurron li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-bottom: 2px dashed #d9c48c;
-}
-.lista-zurron li:last-child { border-bottom: none; }
-.zurron-item-nombre { font-weight: 700; color: #4a3313; text-align: left; flex: 1; }
-.zurron-item-precio { font-weight: 800; color: #7a5a10; }
-.zurron-quitar {
-  font: inherit;
-  border: none;
-  background: #f3d9d9;
-  color: #a12626;
-  border-radius: 8px;
-  width: 30px; height: 30px;
-  cursor: pointer;
-  font-weight: 800;
-}
-.zurron-quitar:hover { background: #e7bcbc; }
-.zurron-total-modal {
-  font-weight: 800;
-  font-size: 1.2rem;
-  color: #6b4a1e;
-  margin: 12px 0;
-}
-.modal-botones { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
-
-/* ---------- Estado del pedido ---------- */
 .estado-pedido { padding: 6px 4px; }
 .estado-grande { font-size: 3rem; margin-bottom: 6px; animation: flotar 2.2s ease-in-out infinite; }
 .girando { display: inline-block; animation: girar 1.2s linear infinite; }
-.estado-texto { font-size: 1.05rem; color: #4a3313; margin-bottom: 14px; }
+.estado-texto { font-size: 1.05rem; color: var(--tinta-media); margin-bottom: 14px; }
 .estado-texto b { color: #8a621a; }
-.detalle-error { font-size: .75rem; color: #a12626; word-break: break-all; margin-top: 8px; }
-
-.detalle-items {
-  text-align: left;
-  background: #fff8e3;
-  border: 2px dashed #d9c48c;
-  border-radius: 10px;
-  padding: 12px 16px;
-  margin: 10px 0;
-}
-.detalle-items li { list-style: none; padding: 3px 0; color: #5c4013; font-weight: 600; }
+.estado-nota { font-size: .85rem; color: var(--tinta-suave); margin-bottom: 12px; }
+.modal-botones { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
 
 .descargables { margin: 10px 0 16px; display: flex; flex-direction: column; gap: 10px; }
 .boton-descarga {
@@ -408,17 +368,17 @@ body {
   font-weight: 700;
   padding: 11px 16px;
   border-radius: 12px;
-  border: 3px solid #4e7a2a;
-  background: linear-gradient(180deg, #b9dd7e, #7fae46);
+  border: 3px solid var(--verde);
+  background: linear-gradient(180deg, var(--verde-claro), var(--verde-medio));
   color: #1d380f;
-  box-shadow: 0 4px 0 #4e7a2a;
+  box-shadow: 0 4px 0 var(--verde);
 }
-.boton-descarga:active { transform: translateY(3px); box-shadow: 0 1px 0 #4e7a2a; }
+.boton-descarga:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--verde); }
 
-/* ---------- Toasts (mensajitos) ---------- */
+/* ---------- Toasts ---------- */
 #toasts {
   position: fixed;
-  bottom: 90px;
+  bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 80;
@@ -430,47 +390,46 @@ body {
 }
 .toast {
   background: #3b2a15;
-  color: #ffe9ae;
+  color: var(--oro-texto);
   font-weight: 700;
   padding: 10px 18px;
   border-radius: 999px;
-  border: 2px solid #c9962e;
+  border: 2px solid var(--oro);
   box-shadow: 0 6px 16px rgba(0,0,0,.35);
   animation: aparecer .25s ease;
+  max-width: 90vw;
 }
 
-.pie { text-align: center; padding: 30px 16px 20px; color: #8a6c3a; font-weight: 600; }
+.pie { text-align: center; padding: 30px 16px 20px; color: var(--tinta-suave); font-weight: 600; }
 
-/* ---------- Panel del admin ---------- */
-.pagina-admin { padding-bottom: 30px; }
-.pagina-admin #toasts { bottom: 20px; }
-
+/* ---------- Login del admin ---------- */
 .tarjeta-login {
   max-width: 420px;
   margin: 30px auto;
-  background: linear-gradient(180deg, #fffaf0, #f4e7c6);
-  border: 4px solid #c9a54e;
+  background: linear-gradient(180deg, var(--papel), #f4e7c6);
+  border: 4px solid var(--oro-borde);
   border-radius: 18px;
   padding: 26px;
   box-shadow: 0 12px 30px rgba(90,60,20,.25);
   text-align: center;
 }
-.tarjeta-login h2 { font-family: "Cinzel", serif; color: #6b4a1e; margin-bottom: 16px; }
+.tarjeta-login h2 { font-family: "Cinzel", serif; color: var(--tinta-media); margin-bottom: 16px; }
 .tarjeta-login form { display: flex; flex-direction: column; gap: 8px; text-align: left; }
-.tarjeta-login label { font-weight: 700; color: #6b4a1e; font-size: .9rem; margin-top: 6px; }
+.tarjeta-login label { font-weight: 700; color: var(--tinta-media); font-size: .9rem; margin-top: 6px; }
 .tarjeta-login input {
   font: inherit; font-size: 1rem;
   padding: 10px 12px;
-  border: 3px solid #a5791f;
+  border: 3px solid var(--oro-oscuro);
   border-radius: 10px;
   background: #fffdf5;
   outline: none;
 }
 .tarjeta-login input:focus { box-shadow: 0 0 0 4px rgba(201,150,46,.25); }
-.login-error { color: #a12626; font-weight: 700; font-size: .9rem; }
-.login-pista { margin-top: 14px; font-size: .82rem; color: #8a6c3a; }
+.login-error { color: var(--rojo); font-weight: 700; font-size: .9rem; }
+.login-pista { margin-top: 14px; font-size: .82rem; color: var(--tinta-suave); }
 .tarjeta-login .boton { margin-top: 12px; }
 
+/* ---------- Panel del admin ---------- */
 .panel-arriba {
   display: flex;
   flex-wrap: wrap;
@@ -480,49 +439,44 @@ body {
   margin: 16px 0 6px;
 }
 .panel-acciones { display: flex; gap: 10px; flex-wrap: wrap; }
-
 .estadisticas { display: flex; flex-wrap: wrap; gap: 10px; }
 .stat {
   background: #fff8e3;
-  border: 2px solid #c9a54e;
+  border: 2px solid var(--oro-borde);
   border-radius: 12px;
   padding: 8px 14px;
   text-align: center;
   min-width: 90px;
 }
-.stat b { display: block; font-size: 1.25rem; color: #6b4a1e; }
-.stat span { font-size: .78rem; color: #8a6c3a; font-weight: 700; }
+.stat b { display: block; font-size: 1.15rem; color: var(--tinta-media); }
+.stat span { font-size: .78rem; color: var(--tinta-suave); font-weight: 700; }
 
 .lista-pedidos { display: flex; flex-direction: column; gap: 14px; margin-bottom: 10px; }
 .pedido {
-  background: linear-gradient(180deg, #fffaf0, #f8eed4);
-  border: 3px solid #c9a54e;
+  background: linear-gradient(180deg, var(--papel), #f8eed4);
+  border: 3px solid var(--oro-borde);
   border-radius: 16px;
   padding: 16px 18px;
   box-shadow: 0 5px 12px rgba(90,60,20,.15);
 }
-.pedido.sin-responder {
-  border-color: #c9812e;
-  animation: latido 2s ease-in-out infinite;
-}
+.pedido.sin-responder { border-color: #c9812e; animation: latido 2s ease-in-out infinite; }
+.pedido-frase { font-size: 1.05rem; color: var(--tinta-media); margin-bottom: 8px; }
+.pedido-frase b { color: var(--tinta); }
 .pedido-cabecera {
-  display: flex; flex-wrap: wrap; gap: 8px;
-  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
 }
-.pedido-jugador { font-family: "Cinzel", serif; font-size: 1.1rem; color: #4a3313; }
-.pedido-hora { font-size: .82rem; color: #8a6c3a; font-weight: 600; }
-.pedido-items { list-style: none; margin: 6px 0; }
-.pedido-items li { padding: 3px 0; color: #5c4013; font-weight: 600; text-align: left; }
-.pedido-total { font-weight: 800; color: #7a5a10; margin: 8px 0 12px; text-align: right; }
-.pedido-botones { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+.pedido-hora { font-size: .82rem; color: var(--tinta-suave); font-weight: 600; }
+.pedido-botones { display: flex; gap: 10px; flex-wrap: wrap; }
 .pedido-estado { padding: 4px 12px; border-radius: 999px; font-weight: 800; font-size: .8rem; }
-.estado-aceptado { background: #dff0d3; color: #2e5620; border: 2px solid #4e7a3a; }
-.estado-rechazado { background: #f7dfdf; color: #7a1f1f; border: 2px solid #a83232; }
+.estado-aceptado { background: #dff0d3; color: #2e5620; border: 2px solid var(--verde); }
+.estado-rechazado { background: #f7dfdf; color: #7a1f1f; border: 2px solid var(--rojo); }
 .sin-pedidos {
   text-align: center;
-  color: #8a6c3a;
+  color: var(--tinta-suave);
   font-weight: 700;
   padding: 24px;
   background: #fff8e3;
@@ -540,9 +494,7 @@ body {
 @media (max-width: 560px) {
   .rejilla { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
   .escenario { height: 170px; }
-  .barra-zurron { gap: 8px; padding: 10px 12px; }
-  .zurron-total { font-size: .95rem; }
-  #boton-tramitar { padding: 9px 12px; font-size: .9rem; }
   .cartel { padding: 16px 22px 12px; }
   .cuerda { display: none; }
+  .leyenda-monedas { font-size: .78rem; }
 }
