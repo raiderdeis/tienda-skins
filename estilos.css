@@ -1,30 +1,29 @@
 /* =========================================================
    EL SASTRE DEL REINO — estilos
-   ✏️ ¿Quieres cambiar los COLORES de la tienda? Edita solo
-   el bloque :root de aquí abajo. El resto déjalo quieto.
+   ✏️ ¿Quieres cambiar los COLORES? Edita solo el bloque :root.
    ========================================================= */
 
 :root {
-  --pergamino: #f5e9cd;      /* fondo general (arriba) */
-  --pergamino-2: #eddfba;    /* fondo general (abajo) */
-  --papel: #fffaf0;          /* fondo de tarjetas (arriba) */
-  --papel-2: #faf1d8;        /* fondo de tarjetas (abajo) */
-  --tinta: #3b2a15;          /* texto oscuro principal */
-  --tinta-media: #5c4013;    /* texto medio */
-  --tinta-suave: #8a6c3a;    /* texto suave */
-  --oro: #c9962e;            /* dorado */
+  --pergamino: #f5e9cd;
+  --pergamino-2: #eddfba;
+  --papel: #fffaf0;
+  --papel-2: #faf1d8;
+  --tinta: #3b2a15;
+  --tinta-media: #5c4013;
+  --tinta-suave: #8a6c3a;
+  --oro: #c9962e;
   --oro-claro: #e7b64c;
   --oro-oscuro: #a5791f;
   --oro-borde: #c9a54e;
-  --oro-texto: #ffe9ae;      /* texto claro sobre madera */
+  --oro-texto: #ffe9ae;
   --madera: #6f4522;
   --madera-clara: #8a5a2b;
   --madera-oscura: #59371a;
   --madera-borde: #4a2e13;
-  --verde: #4e7a2a;          /* botones de aceptar */
+  --verde: #4e7a2a;
   --verde-claro: #b9dd7e;
   --verde-medio: #7fae46;
-  --rojo: #a83232;           /* botones de rechazar */
+  --rojo: #a83232;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -114,7 +113,6 @@ body {
   background: #fffdf5;
   color: var(--tinta);
   outline: none;
-  transition: box-shadow .15s, border-color .15s;
 }
 .pergamino-nombre input:focus {
   border-color: var(--oro);
@@ -148,7 +146,6 @@ body {
   color: var(--tinta-media);
   cursor: pointer;
   box-shadow: 0 3px 0 var(--oro-oscuro);
-  transition: transform .1s, box-shadow .1s, background .15s;
 }
 .chip:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--oro-oscuro); }
 .chip.activo {
@@ -247,6 +244,7 @@ body {
 }
 .escenario:active { cursor: grabbing; }
 .escenario canvas { width: 100%; height: 100%; display: block; }
+.escenario-mini { height: 150px; }
 .piel-error {
   position: absolute;
   inset: 0;
@@ -352,6 +350,11 @@ body {
   box-shadow: 0 20px 50px rgba(40, 22, 5, .5);
   text-align: center;
 }
+.modal h2 {
+  font-family: "Cinzel", serif;
+  color: var(--tinta-media);
+  margin-bottom: 14px;
+}
 .estado-pedido { padding: 6px 4px; }
 .estado-grande { font-size: 3rem; margin-bottom: 6px; animation: flotar 2.2s ease-in-out infinite; }
 .girando { display: inline-block; animation: girar 1.2s linear infinite; }
@@ -402,7 +405,7 @@ body {
 
 .pie { text-align: center; padding: 30px 16px 20px; color: var(--tinta-suave); font-weight: 600; }
 
-/* ---------- Login del admin ---------- */
+/* ---------- Login ---------- */
 .tarjeta-login {
   max-width: 420px;
   margin: 30px auto;
@@ -460,7 +463,17 @@ body {
   box-shadow: 0 5px 12px rgba(90,60,20,.15);
 }
 .pedido.sin-responder { border-color: #c9812e; animation: latido 2s ease-in-out infinite; }
-.pedido-frase { font-size: 1.05rem; color: var(--tinta-media); margin-bottom: 8px; }
+.pedido-franja { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+.pedido-mini {
+  width: 46px; height: 46px;
+  image-rendering: pixelated;
+  border: 2px solid var(--oro-borde);
+  border-radius: 8px;
+  background: #fff;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.pedido-frase { font-size: 1.05rem; color: var(--tinta-media); }
 .pedido-frase b { color: var(--tinta); }
 .pedido-cabecera {
   display: flex;
@@ -484,6 +497,102 @@ body {
   border-radius: 14px;
 }
 
+/* ---------- Taller del Sastre (editor) ---------- */
+.caja-editor {
+  background: linear-gradient(180deg, var(--papel), #f6ead0);
+  border: 3px solid var(--oro-borde);
+  border-radius: 18px;
+  padding: 20px;
+  margin: 18px 0;
+  box-shadow: 0 6px 14px rgba(90,60,20,.18);
+}
+.caja-editor h2 { font-family: "Cinzel", serif; color: var(--tinta-media); margin-bottom: 6px; }
+.caja-editor h3 { font-family: "Cinzel", serif; color: var(--tinta-media); margin: 16px 0 4px; font-size: 1.05rem; }
+
+.entrada {
+  width: 100%;
+  font: inherit;
+  font-size: 1rem;
+  padding: 9px 12px;
+  border: 3px solid var(--oro-oscuro);
+  border-radius: 10px;
+  background: #fffdf5;
+  color: var(--tinta);
+  outline: none;
+}
+.entrada:focus { border-color: var(--oro); box-shadow: 0 0 0 4px rgba(201,150,46,.25); }
+.etiqueta-campo {
+  display: block;
+  font-weight: 700;
+  color: var(--tinta-media);
+  font-size: .9rem;
+  margin: 12px 0 4px;
+  text-align: left;
+}
+
+.fila-moneda {
+  display: grid;
+  grid-template-columns: 60px 1fr 110px 42px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.fila-moneda .entrada-num { text-align: center; }
+.quitar-moneda {
+  font: inherit;
+  border: none;
+  background: #f3d9d9;
+  color: var(--rojo);
+  border-radius: 8px;
+  height: 42px;
+  cursor: pointer;
+  font-weight: 800;
+}
+.quitar-moneda:hover { background: #e7bcbc; }
+
+.zona-soltar {
+  border: 3px dashed var(--oro-oscuro);
+  border-radius: 14px;
+  background: #fffdf3;
+  padding: 18px;
+  text-align: center;
+  color: var(--tinta-suave);
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.zona-soltar.arrastrando { border-color: var(--verde); background: #f0f7e6; }
+.zona-soltar.con-imagen { border-color: var(--verde); color: #2e5620; }
+
+.vista-previa-precio {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+  min-height: 30px;
+  margin: 6px 0;
+  align-items: center;
+}
+
+.fila-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: var(--tinta-media);
+  margin: 10px 0;
+  cursor: pointer;
+  text-align: left;
+}
+.fila-check input { width: 20px; height: 20px; accent-color: var(--verde); cursor: pointer; }
+
+.editor-botones { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+.editor-botones .boton { padding: 6px 4px; font-size: .9rem; box-shadow: 0 3px 0 var(--oro-oscuro); }
+.editor-botones .boton:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--oro-oscuro); }
+.editor-botones .boton-peligro { box-shadow: 0 3px 0 #7a2626; }
+
+.etiquetas-editor { font-size: .78rem; color: var(--tinta-suave); font-weight: 700; margin: 2px 0 6px; }
+
 /* ---------- Animaciones ---------- */
 @keyframes aparecer { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes flotar { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
@@ -494,7 +603,10 @@ body {
 @media (max-width: 560px) {
   .rejilla { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
   .escenario { height: 170px; }
+  .escenario-mini { height: 130px; }
   .cartel { padding: 16px 22px 12px; }
   .cuerda { display: none; }
   .leyenda-monedas { font-size: .78rem; }
+  .fila-moneda { grid-template-columns: 54px 1fr 84px 38px; }
+  .pedido-franja { flex-direction: row; }
 }
