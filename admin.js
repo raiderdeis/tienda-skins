@@ -1,5 +1,7 @@
 /* =========================================================
    LÓGICA DEL PANEL DEL SASTRE — no toques nada aquí 🪡
+   (tu correo y contraseña SOLO los usas tú, en esta página.
+    Los jugadores nunca crean cuentas ni nada parecido)
    ========================================================= */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -11,7 +13,17 @@ import {
 
 const $ = (sel) => document.querySelector(sel);
 
-const conf = (typeof TIENDA !== "undefined" && TIENDA.firebase) ? TIENDA.firebase : null;
+const CONF = (typeof TIENDA !== "undefined" && TIENDA) ? TIENDA : {
+  monedas: [
+    { nombre: "Cobre", emoji: "🥉", equivale: 1 },
+    { nombre: "Plata", emoji: "🥈", equivale: 50 },
+    { nombre: "Oro", emoji: "🥇", equivale: 50 },
+    { nombre: "Diamante", emoji: "💎", equivale: 50 }
+  ],
+  firebase: null
+};
+
+const conf = CONF.firebase || null;
 const firebaseListo = !!conf && !String(conf.apiKey || "").includes("PEGA_AQUÍ");
 
 const app = firebaseListo ? initializeApp(conf) : null;
@@ -28,14 +40,47 @@ function toast(texto) {
   t.className = "toast";
   t.textContent = texto;
   caja.appendChild(t);
-  setTimeout(() => t.remove(), 3800);
+  setTimeout(() => t.remove(), 4200);
+}
+
+/* ---------- monedas (para las estadísticas) ---------- */
+function normalizar(t) {
+  return String(t).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+function valorAbsolutoMonedas() {
+  const lista = (CONF.monedas || []).map(m => ({ ...m }));
+  const salida = [];
+  let abs = 1;
+  lista.forEach((m, i) => {
+    if (i > 0) abs = abs * (Number(m.equivale) || 1);
+    salida.push({ nombre: m.nombre, absoluto: abs });
+  });
+  return salida;
+}
+const MONEDAS = valorAbsolutoMonedas();
+function desglose(total) {
+  let resto = Math.max(0, Math.round(total));
+  const partes = [];
+  for (let i = MONEDAS.length - 1; i >= 0; i--) {
+    const cant = Math.floor(resto / MONEDAS[i].absoluto);
+    if (cant > 0) { partes.push(`${cant} ${MONEDAS[i].nombre}`); resto -= cant * MONEDAS[i].absoluto; }
+  }
+  if (!partes.length) partes.push(`0 ${MONEDAS[0].nombre}`);
+  return partes;
+}
+function textoMonedas(total) {
+  const partes = desglose(total);
+  if (partes.length === 1) return partes[0];
+  return partes.slice(0, -1).join(", ") + " y " + partes[partes.length - 1];
 }
 
 /* ---------- login ---------- */
 if (!firebaseListo) {
   const err = $("#login-error");
-  err.hidden = false;
-  err.textContent = "⚠️ Falta conectar Firebase: completa el paso 3 de la guía (edita config.js).";
+  if (err) {
+    err.hidden = false;
+    err.textContent = "⚠️ Falta conectar Firebase: completa config.js con los datos de tu proyecto.";
+  }
 } else {
   $("#form-login").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -43,8 +88,8 @@ if (!firebaseListo) {
     const clave = $("#login-clave").value;
     const err = $("#login-error");
     err.hidden = true;
+    if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e2) {} }
     try {
-      if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e2) {} }
       await signInWithEmailAndPassword(auth, correo, clave);
     } catch (e2) {
       err.textContent = traducirError(e2 && e2.code);
@@ -64,6 +109,10 @@ if (!firebaseListo) {
       primeraCarga = true;
     }
   });
+
+  $("#boton-salir").addEventListener("click", async () => {
+    try { await signOut(auth); toast("Has salido del atelier 🚪"); } catch (e) {}
+  });
 }
 
 function traducirError(codigo) {
@@ -74,8 +123,9 @@ function traducirError(codigo) {
   return "Error: " + codigo;
 }
 
-/* ---------- notificaciones ---------- */
+/* ---------- campanita / notificaciones ---------- */
  $("#boton-campanita").addEventListener("click", async () => {
+  if (!audioCtx) { try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
   if (!("Notification" in window)) { toast("Tu navegador no soporta notificaciones 😿"); return; }
   const permiso = await Notification.requestPermission();
   if (permiso === "granted") {
@@ -89,10 +139,6 @@ function traducirError(codigo) {
 if ("Notification" in window && Notification.permission === "granted") {
   $("#boton-campanita").textContent = "🔔 Notificaciones activadas";
 }
-
- $("#boton-salir").addEventListener("click", async () => {
-  try { await signOut(auth); toast("Has salido del atelier 🚪"); } catch (e) {}
-});
 
 /* ---------- escuchar pedidos ---------- */
 function escucharPedidos() {
@@ -112,46 +158,48 @@ function escucharPedidos() {
 function detectarNuevos(snap) {
   if (primeraCarga) return;
   snap.docChanges().forEach(cambio => {
-    if (cambio.type === "added" && cambio.doc.data().estado === "pendiente") {
-      avisarNuevoPedido(cambio.doc.data());
+    const d = cambio.doc.data();
+    if (cambio.type === "added" && d.estado === "pendiente" && d.nombreSkin) {
+      avisarNuevoPedido(d);
     }
   });
 }
 
 function avisarNuevoPedido(d) {
   ding();
-  const quien = d.jugador || "Alguien";
-  const cuantas = (d.items || []).length;
+  const frase = `${d.jugador} quiere comprar «${d.nombreSkin}» por ${d.precioTexto}`;
   if ("Notification" in window && Notification.permission === "granted") {
-    try {
-      new Notification("🛎️ ¡Nuevo encargo!", {
-        body: `${quien} quiere comprar ${cuantas} ${cuantas === 1 ? "prenda" : "prendas"} por ${TIENDA.iconoMoneda} ${d.total} ${TIENDA.moneda}.`
-      });
-    } catch (e) {}
+    try { new Notification("🛎️ ¡Nuevo encargo!", { body: frase }); } catch (e) {}
   }
-  toast(`🛎️ ¡${quien} acaba de pedir ${cuantas} ${cuantas === 1 ? "prenda" : "prendas"}!`);
+  toast(`🛎️ ${frase}`);
 }
 
 /* ---------- pintar la lista ---------- */
 function pintarPedidos(pedidos) {
-  const pendientes = pedidos.filter(p => p.estado === "pendiente");
-  const decididos = pedidos.filter(p => p.estado !== "pendiente");
+  const validos = pedidos.filter(p => p.nombreSkin);
+  const viejos = pedidos.filter(p => !p.nombreSkin);
+  const pendientes = validos.filter(p => p.estado === "pendiente");
+  const decididos = validos.filter(p => p.estado !== "pendiente");
 
   document.title = pendientes.length ? `(${pendientes.length}) 🪡 Panel del Sastre` : "🪡 Panel del Sastre";
 
-  const aceptados = pedidos.filter(p => p.estado === "aceptado");
-  const ingresos = aceptados.reduce((s, p) => s + (p.total || 0), 0);
+  const aceptados = validos.filter(p => p.estado === "aceptado");
+  const totalCobre = aceptados.reduce((s, p) => s + (p.precioCobre || 0), 0);
   $("#estadisticas").innerHTML = `
     <div class="stat"><b>${pendientes.length}</b><span>Sin responder</span></div>
     <div class="stat"><b>${aceptados.length}</b><span>Aceptados</span></div>
-    <div class="stat"><b>${TIENDA.iconoMoneda} ${ingresos}</b><span>Vendido (rol)</span></div>
+    <div class="stat"><b>${textoMonedas(totalCobre)}</b><span>Vendido (rol)</span></div>
   `;
+
+  const notaViejos = viejos.length
+    ? `<p class="sin-pedidos">📦 Hay ${viejos.length} pedido(s) viejo(s) de pruebas — bórralos en Firebase → Firestore → Datos.</p>`
+    : "";
 
   const contP = $("#lista-pendientes");
   if (!pendientes.length) {
-    contP.innerHTML = `<p class="sin-pedidos">No hay encargos pendientes… momento perfecto para bordar 🧵</p>`;
+    contP.innerHTML = notaViejos + `<p class="sin-pedidos">No hay encargos pendientes… momento perfecto para bordar 🧵</p>`;
   } else {
-    contP.innerHTML = "";
+    contP.innerHTML = notaViejos;
     pendientes.forEach(p => contP.appendChild(tarjetaPedido(p, true)));
   }
 
@@ -167,42 +215,39 @@ function pintarPedidos(pedidos) {
 function tarjetaPedido(p, pendiente) {
   const el = document.createElement("article");
   el.className = "pedido" + (pendiente ? " sin-responder" : "");
-  const items = (p.items || []).map(i => `<li>• ${i.nombre} — ${TIENDA.iconoMoneda} ${i.precio}</li>`).join("");
   const hora = p.creado && p.creado.toMillis ? new Date(p.creado.toMillis()).toLocaleString() : "hace un momento";
   el.innerHTML = `
+    <div class="pedido-frase">🧙 <b>${p.jugador || "Desconocido"}</b> quiere comprar <b>«${p.nombreSkin}»</b> por <b>${p.precioTexto}</b></div>
     <div class="pedido-cabecera">
-      <span class="pedido-jugador">🧙 ${p.jugador || "Desconocido"}</span>
       <span class="pedido-hora">🗓️ ${hora}</span>
-    </div>
-    <ul class="pedido-items">${items}</ul>
-    <p class="pedido-total">Total: ${TIENDA.iconoMoneda} ${p.total || 0} ${TIENDA.moneda}</p>
-    ${
-      pendiente
+      ${pendiente
         ? `<div class="pedido-botones">
-             <button class="boton boton-destacado" data-accion="aceptar">✅ Aceptar encargo</button>
+             <button class="boton boton-destacado" data-accion="aceptar">✅ Aceptar</button>
              <button class="boton boton-peligro" data-accion="rechazar">🚫 Rechazar</button>
            </div>`
-        : `<div class="pedido-botones"><span class="pedido-estado ${p.estado === "aceptado" ? "estado-aceptado" : "estado-rechazado"}">${p.estado === "aceptado" ? "✅ Aceptado" : "🚫 Rechazado"}</span></div>`
-    }
+        : `<span class="pedido-estado ${p.estado === "aceptado" ? "estado-aceptado" : "estado-rechazado"}">${p.estado === "aceptado" ? "✅ Aceptado" : "🚫 Rechazado"}</span>`}
+    </div>
   `;
   if (pendiente) {
     el.querySelectorAll("[data-accion]").forEach(b => {
-      b.addEventListener("click", async () => {
-        b.disabled = true;
-        try {
-          await updateDoc(doc(db, "pedidos", p.id), {
-            estado: b.dataset.accion === "aceptar" ? "aceptado" : "rechazado",
-            decidido: serverTimestamp()
-          });
-          toast(b.dataset.accion === "aceptar" ? `Encargo de ${p.jugador} aceptado ✅` : `Encargo de ${p.jugador} rechazado 🚫`);
-        } catch (err) {
-          b.disabled = false;
-          toast("⚠️ No se pudo guardar: " + (err.message || err));
-        }
-      });
+      b.addEventListener("click", () => decidir(p, b.dataset.accion, b));
     });
   }
   return el;
+}
+
+async function decidir(p, accion, boton) {
+  boton.disabled = true;
+  try {
+    await updateDoc(doc(db, "pedidos", p.id), {
+      estado: accion === "aceptar" ? "aceptado" : "rechazado",
+      decidido: serverTimestamp()
+    });
+    toast(accion === "aceptar" ? `Encargo de ${p.jugador} aceptado ✅` : `Encargo de ${p.jugador} rechazado 🚫`);
+  } catch (err) {
+    boton.disabled = false;
+    toast("⚠️ No se pudo guardar: " + (err.message || err));
+  }
 }
 
 /* ---------- campanita (sonido) ---------- */
