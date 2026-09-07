@@ -1,29 +1,26 @@
 /* =========================================================
    LÓGICA DEL PANEL DEL SASTRE — no toques nada aquí 🪡
-   (tu correo y contraseña SOLO los usas tú, en esta página.
-    Los jugadores nunca crean cuentas ni nada parecido)
    ========================================================= */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, onSnapshot, updateDoc,
+  getFirestore, collection, doc, onSnapshot, updateDoc, getDoc,
   serverTimestamp, query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const $ = (sel) => document.querySelector(sel);
 
-const CONF = (typeof TIENDA !== "undefined" && TIENDA) ? TIENDA : {
+const CONF = {
   monedas: [
     { nombre: "Cobre", emoji: "🥉", equivale: 1 },
     { nombre: "Plata", emoji: "🥈", equivale: 50 },
     { nombre: "Oro", emoji: "🥇", equivale: 50 },
     { nombre: "Diamante", emoji: "💎", equivale: 50 }
-  ],
-  firebase: null
+  ]
 };
 
-const conf = CONF.firebase || null;
+const conf = (typeof TIENDA !== "undefined" && TIENDA && TIENDA.firebase) ? TIENDA.firebase : null;
 const firebaseListo = !!conf && !String(conf.apiKey || "").includes("PEGA_AQUÍ");
 
 const app = firebaseListo ? initializeApp(conf) : null;
@@ -33,6 +30,8 @@ const db = firebaseListo ? getFirestore(app) : null;
 let primeraCarga = true;
 let cancelarPedidos = null;
 let audioCtx = null;
+let configCargada = false;
+let MONEDAS = [];
 
 function toast(texto) {
   const caja = $("#toasts");
@@ -44,11 +43,8 @@ function toast(texto) {
 }
 
 /* ---------- monedas (para las estadísticas) ---------- */
-function normalizar(t) {
-  return String(t).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-}
 function valorAbsolutoMonedas() {
-  const lista = (CONF.monedas || []).map(m => ({ ...m }));
+  const lista = CONF.monedas || [];
   const salida = [];
   let abs = 1;
   lista.forEach((m, i) => {
@@ -57,7 +53,6 @@ function valorAbsolutoMonedas() {
   });
   return salida;
 }
-const MONEDAS = valorAbsolutoMonedas();
 function desglose(total) {
   let resto = Math.max(0, Math.round(total));
   const partes = [];
@@ -65,7 +60,7 @@ function desglose(total) {
     const cant = Math.floor(resto / MONEDAS[i].absoluto);
     if (cant > 0) { partes.push(`${cant} ${MONEDAS[i].nombre}`); resto -= cant * MONEDAS[i].absoluto; }
   }
-  if (!partes.length) partes.push(`0 ${MONEDAS[0].nombre}`);
+  if (!partes.length && MONEDAS.length) partes.push(`0 ${MONEDAS[0].nombre}`);
   return partes;
 }
 function textoMonedas(total) {
@@ -97,8 +92,9 @@ if (!firebaseListo) {
     }
   });
 
-  onAuthStateChanged(auth, (usuario) => {
+  onAuthStateChanged(auth, async (usuario) => {
     if (usuario) {
+      await cargarConfig();
       $("#seccion-login").hidden = true;
       $("#seccion-panel").hidden = false;
       escucharPedidos();
@@ -113,6 +109,18 @@ if (!firebaseListo) {
   $("#boton-salir").addEventListener("click", async () => {
     try { await signOut(auth); toast("Has salido del atelier 🚪"); } catch (e) {}
   });
+}
+
+async function cargarConfig() {
+  if (configCargada) return;
+  configCargada = true;
+  try {
+    const snap = await getDoc(doc(db, "configuracion", "tienda"));
+    if (snap.exists() && snap.data().monedas && snap.data().monedas.length) {
+      CONF.monedas = snap.data().monedas;
+    }
+  } catch (e) {}
+  MONEDAS = valorAbsolutoMonedas();
 }
 
 function traducirError(codigo) {
@@ -217,7 +225,10 @@ function tarjetaPedido(p, pendiente) {
   el.className = "pedido" + (pendiente ? " sin-responder" : "");
   const hora = p.creado && p.creado.toMillis ? new Date(p.creado.toMillis()).toLocaleString() : "hace un momento";
   el.innerHTML = `
-    <div class="pedido-frase">🧙 <b>${p.jugador || "Desconocido"}</b> quiere comprar <b>«${p.nombreSkin}»</b> por <b>${p.precioTexto}</b></div>
+    <div class="pedido-franja">
+      ${p.imagen ? `<img class="pedido-mini" src="${p.imagen}" alt="">` : ""}
+      <div class="pedido-frase">🧙 <b>${p.jugador || "Desconocido"}</b> quiere comprar <b>«${p.nombreSkin}»</b> por <b>${p.precioTexto}</b></div>
+    </div>
     <div class="pedido-cabecera">
       <span class="pedido-hora">🗓️ ${hora}</span>
       ${pendiente
