@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🛠️ Taller del Sastre</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🛠️</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700&family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body class="pagina-admin">
+
+  <header class="cabecera">
+    <div class="cartel">
+      <div class="cuerda cuerda-izq"></div>
+      <div class="cuerda cuerda-der"></div>
+      <h1>🛠️ Taller del Sastre</h1>
+      <p>Edita tu tienda sin tocar una sola línea de código 🎮</p>
+    </div>
+  </header>
+
+  <main class="contenido">
+
+    <!-- LOGIN -->
+    <section class="tarjeta-login" id="seccion-login">
+      <h2>🔒 Identifícate, modista</h2>
+      <form id="form-login">
+        <label>Correo (el que creaste en Firebase)</label>
+        <input type="email" id="login-correo" placeholder="sastre@reino.com" autocomplete="username">
+        <label>Contraseña</label>
+        <input type="password" id="login-clave" placeholder="••••••••" autocomplete="current-password">
+        <p class="login-error" id="login-error" hidden></p>
+        <button class="boton boton-destacado" type="submit">Entrar al taller</button>
+      </form>
+      <p class="login-pista">💡 Mismos correo y contraseña que usas en el Panel del Sastre.</p>
+    </section>
+
+    <!-- EDITOR -->
+    <section id="seccion-editor" hidden>
+      <div class="panel-arriba">
+        <div class="panel-acciones">
+          <a class="boton" href="index.html" target="_blank">👁️ Ver tienda</a>
+          <a class="boton" href="admin.html">🪡 Panel de encargos</a>
+          <button class="boton boton-peligro" id="boton-salir">Salir 🚪</button>
+        </div>
+      </div>
+      <p class="leyenda-monedas">💡 Consejo: deja la tienda abierta en otra pestaña y mira cómo cambia EN VIVO cada vez que guardas ✨</p>
+
+      <!-- CONFIGURACIÓN -->
+      <section class="caja-editor">
+        <h2>🏠 Configuración del atelier</h2>
+
+        <label class="etiqueta-campo" for="conf-nombre">Nombre de la tienda</label>
+        <input class="entrada" id="conf-nombre" type="text" maxlength="40">
+
+        <label class="etiqueta-campo" for="conf-subtitulo">Frase decorativa (bajo el nombre)</label>
+        <input class="entrada" id="conf-subtitulo" type="text" maxlength="90">
+
+        <h3>🪙 Monedas del reino</h3>
+        <p class="pista">La primera es la base (vale 1; su «equivale» se ignora). «Equivale» = cuántas de la moneda de arriba vale 1 de esta.</p>
+        <div id="filas-monedas"></div>
+        <button class="boton" id="boton-anadir-moneda">➕ Añadir moneda</button>
+
+        <div class="modal-botones" style="justify-content:flex-start">
+          <button class="boton boton-destacado" id="boton-guardar-config">💾 Guardar configuración</button>
+        </div>
+      </section>
+
+      <!-- CATÁLOGO -->
+      <section class="caja-editor">
+        <h2>🧵 Catálogo de prendas</h2>
+        <div class="modal-botones" style="justify-content:flex-start; margin: 8px 0 14px;">
+          <button class="boton boton-destacado" id="boton-nueva-prenda">✨ Añadir nueva prenda</button>
+        </div>
+        <div class="rejilla" id="lista-editor"></div>
+      </section>
+    </section>
+  </main>
+
+  <!-- MODAL DE PRENDA -->
+  <div class="velo" id="velo-prenda" hidden>
+    <div class="modal">
+      <h2 id="titulo-modal">✨ Nueva prenda</h2>
+
+      <div class="zona-soltar" id="zona-soltar">
+        <span id="texto-zona">🖼️ Arrastra aquí tu PNG de skin<br>o toca para elegir el archivo</span>
+      </div>
+      <input type="file" id="input-archivo" accept="image/png" hidden>
+
+      <div class="escenario escenario-mini" id="vista-prenda"></div>
+
+      <label class="etiqueta-campo" for="prenda-nombre">Nombre de la prenda</label>
+      <input class="entrada" id="prenda-nombre" type="text" maxlength="40" placeholder="Ej: Capa del Viajero">
+
+      <label class="etiqueta-campo" for="prenda-precio">Precio — ej: «1 oro 25 plata» (o solo un número = cobre)</label>
+      <input class="entrada" id="prenda-precio" type="text" placeholder="1 oro 25 plata">
+      <div class="vista-previa-precio" id="previa-precio"></div>
+
+      <label class="etiqueta-campo" for="prenda-categoria">Categoría</label>
+      <input class="entrada" id="prenda-categoria" type="text" maxlength="24" list="lista-categorias" placeholder="Ej: Magos">
+      <datalist id="lista-categorias"></datalist>
+
+      <label class="fila-check"><input type="checkbox" id="prenda-nuevo"> Mostrar cinta «¡NUEVO!»</label>
+      <label class="fila-check"><input type="checkbox" id="prenda-slim"> Modelo «Alex» (brazos finos)</label>
+
+      <p class="estado-nota" id="error-prenda" hidden></p>
+      <div class="modal-botones">
+        <button class="boton" id="boton-cancelar-prenda">Cancelar</button>
+        <button class="boton boton-destacado" id="boton-guardar-prenda">💾 Guardar prenda</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toasts"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/skinview3d@3/bundles/skinview3d.bundle.js"></script>
+  <script src="config.js"></script>
+  <script type="module" src="editor.js"></script>
+</body>
+</html>
