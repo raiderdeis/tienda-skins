@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>El Sastre del Reino — Tienda de pieles</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>🧵</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Cinzel:wght@600;700&family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <div class="cartel">
+      <div class="cuerda cuerda-izq"></div>
+      <div class="cuerda cuerda-der"></div>
+      <h1 id="titulo-tienda">El Sastre del Reino</h1>
+      <p id="subtitulo-tienda">Atelier de pieles finas para viajeros distinguidos ✨</p>
+    </div>
+
+    <div class="pergamino-nombre">
+      <label for="input-nombre">✍️ ¿Quién anda ahí? Escribe tu nombre de Minecraft:</label>
+      <input id="input-nombre" type="text" maxlength="24" placeholder="Ej: Steve_ElValiente" autocomplete="off">
+      <p class="pista">Elige prendas → toca «Tramitar encargo» → espera la respuesta del sastre 🧵</p>
+    </div>
+  </header>
+
+  <main class="contenido">
+    <nav class="categorias" id="categorias"></nav>
+    <div class="aviso" id="aviso-pedido" hidden></div>
+
+    <section class="seccion">
+      <h2 class="titulo-seccion">✦ Ofertas del día ✦</h2>
+      <div class="rejilla" id="rejilla"></div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <p>🏰 Tienda de roleplay — aquí no se gasta dinero real 💎</p>
+    <p>Hecho con cariño por tu modista favorito 🧵</p>
+  </footer>
+
+  <!-- Barra del zurrón (carrito) -->
+  <div class="barra-zurron" id="barra-zurron">
+    <button class="zurron-info" id="boton-ver-zurron">
+      <span class="zurron-icono">🧺</span>
+      <span id="zurron-texto">0 prendas</span>
+    </button>
+    <div class="zurron-total" id="zurron-total">Total: 💎 0</div>
+    <button class="boton boton-destacado" id="boton-tramitar">Tramitar encargo</button>
+  </div>
+
+  <!-- Modal del zurrón -->
+  <div class="velo" id="velo-zurron" hidden>
+    <div class="modal">
+      <h2>Tu zurrón 🧺</h2>
+      <ul class="lista-zurron" id="lista-zurron"></ul>
+      <div class="zurron-total-modal" id="zurron-total-modal"></div>
+      <div class="modal-botones">
+        <button class="boton" id="boton-seguir">Seguir mirando</button>
+        <button class="boton boton-destacado" id="boton-tramitar-2">Tramitar encargo ✍️</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal del estado del pedido -->
+  <div class="velo" id="velo-pedido" hidden>
+    <div class="modal" id="cuerpo-pedido"></div>
+  </div>
+
+  <div id="toasts"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/skinview3d@3/bundles/skinview3d.bundle.js"></script>
+  <script src="config.js"></script>
+  <script src="skins.js"></script>
+  <script type="module" src="tienda.js"></script>
+</body>
+</html>
