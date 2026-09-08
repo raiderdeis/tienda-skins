@@ -1,5 +1,6 @@
 /* =========================================================
    LÓGICA DEL PANEL DEL SASTRE — no toques nada aquí 🪡
+   Aquí entran el modista principal Y los asistentes.
    ========================================================= */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -32,6 +33,10 @@ let cancelarPedidos = null;
 let audioCtx = null;
 let configCargada = false;
 let MONEDAS = [];
+
+function esAsistente(usuario) {
+  return !!(usuario && usuario.email && usuario.email.toLowerCase().includes("@asistentes"));
+}
 
 function toast(texto) {
   const caja = $("#toasts");
@@ -93,14 +98,17 @@ if (!firebaseListo) {
   });
 
   onAuthStateChanged(auth, async (usuario) => {
+    const enlaceEditor = document.getElementById("enlace-editor");
     if (usuario) {
       await cargarConfig();
       $("#seccion-login").hidden = true;
       $("#seccion-panel").hidden = false;
+      if (enlaceEditor) enlaceEditor.hidden = esAsistente(usuario);
       escucharPedidos();
     } else {
       $("#seccion-login").hidden = false;
       $("#seccion-panel").hidden = true;
+      if (enlaceEditor) enlaceEditor.hidden = false;
       if (cancelarPedidos) { cancelarPedidos(); cancelarPedidos = null; }
       primeraCarga = true;
     }
