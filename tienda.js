@@ -41,8 +41,8 @@ let catalogo = [];
 const escuchas = {};
 
 const ICONOS_CATEGORIA = {
-  "Todo": "🛍️", "Caballeros": "⚔️", "Magos": "🧙", "Vestidos": "👗",
-  "Aldeanos": "🧑‍🌾", "Disfraces": "🎭", "Nobles": "👑", "Aventureros": "🗺️"
+  "Todo": "🛍️", "Outfit completo": "🧵", "Cuerpo completo": "🧵", "Caballeros": "⚔️", "Magos": "🧙",
+  "Vestidos": "👗", "Aldeanos": "🧑‍🌾", "Disfraces": "🎭", "Nobles": "👑", "Aventureros": "🗺️"
 };
 
 /* ---------- monedas ---------- */
@@ -130,6 +130,16 @@ function abrirVelo(sel) { $(sel).hidden = false; }
 function cerrarVelo(sel) { $(sel).hidden = true; }
 function guardarPedidos() { localStorage.setItem(CLAVES.pedidos, JSON.stringify(misPedidos)); }
 function productoDe(id) { return catalogo.find(p => p.id === id) || null; }
+function piezasDe(producto) {
+  const lista = [];
+  if (producto && producto.piezas && producto.piezas.length) {
+    producto.piezas.forEach(pid => {
+      const pz = productoDe(pid);
+      if (pz && pz.imagen) lista.push(pz);
+    });
+  }
+  return lista;
+}
 
 /* ---------- arranque ---------- */
 function iniciar() {
@@ -154,7 +164,6 @@ function iniciar() {
     return;
   }
 
-  // configuración de la tienda, EN VIVO desde el editor
   onSnapshot(doc(db, "configuracion", "tienda"), (snap) => {
     const datos = snap.exists() ? snap.data() : {};
     CONF = {
@@ -168,13 +177,11 @@ function iniciar() {
     reconstruirCatalogo();
   }, () => {});
 
-  // catálogo, EN VIVO desde el editor
   onSnapshot(collection(db, "catalogo"), (snap) => {
     crudos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     reconstruirCatalogo();
   }, (err) => toast("⚠️ No pude leer el catálogo: " + (err.message || err)));
 
-  // retomar encargos que quedaron esperando respuesta
   Object.keys(misPedidos).forEach(id => {
     if (misPedidos[id] && misPedidos[id].estado === "pendiente") escuchar(id);
   });
@@ -250,16 +257,25 @@ function pintarRejilla() {
   }
   lista.forEach(p => {
     const tarjeta = document.createElement("article");
-    tarjeta.className = "tarjeta";
+    tarjeta.className = "tarjeta" + (p.agotado ? " tarjeta-agotada" : "");
     tarjeta.dataset.id = p.id;
     const badges = desglose(p.precioCobre, MONEDAS)
       .map(b => `<span class="moneda-badge" title="${b.moneda.nombre}">${b.moneda.emoji} ${b.cant}</span>`)
       .join("");
+    const piezasNota = (p.piezas && p.piezas.length)
+      ? `<p class="nota-piezas">🧩 Incluye ${p.piezas.length} piezas (también se venden sueltas)</p>`
+      : "";
+    const estante = p.estante
+      ? `<p class="estante-badge">📍 ${p.estante}</p>`
+      : "";
     tarjeta.innerHTML = `
       ${p.nuevo ? '<span class="cinta-nuevo">¡NUEVO!</span>' : ""}
+      ${p.agotado ? '<span class="cinta-agotado">SIN STOCK</span>' : ""}
       <div class="escenario" data-id="${p.id}" title="Arrastra para girar la figura"></div>
       <h3 class="prenda-nombre">${p.nombre || "Sin nombre"}</h3>
       <div class="precio-monedas">${badges}</div>
+      ${estante}
+      ${piezasNota}
       <div class="zona-accion"></div>
     `;
     rejilla.appendChild(tarjeta);
@@ -281,24 +297,39 @@ function pintarAccion(producto) {
     return;
   }
   if (estado === "aceptado") {
-    const imagen = (entrada && entrada.imagen) || producto.imagen;
-    if (imagen) {
-      const enlace = document.createElement("a");
-      enlace.className = "boton boton-destacado";
-      enlace.href = urlDescarga(imagen);
-      enlace.download = `${producto.id}.png`;
-      enlace.textContent = "⬇️ ¡Descargar!";
+    if (producto.piezas && producto.piezas.length) {
+      const b = document.createElement("button");
+      b.className = "boton boton-destacado";
+      b.textContent = "⬇️ Ver descargas";
+      b.addEventListener("click", () => mostrarModalPedido(producto, { estado: "aceptado" }));
       zona.innerHTML = "";
-      zona.appendChild(enlace);
+      zona.appendChild(b);
     } else {
-      zona.innerHTML = `<button class="boton" disabled>❓ Prenda no disponible</button>`;
+      const imagen = (entrada && entrada.imagen) || producto.imagen;
+      if (imagen) {
+        const enlace = document.createElement("a");
+        enlace.className = "boton boton-destacado";
+        enlace.href = urlDescarga(imagen);
+        enlace.download = `${producto.id}.png`;
+        enlace.textContent = "⬇️ ¡Descargar!";
+        zona.innerHTML = "";
+        zona.appendChild(enlace);
+      } else {
+        zona.innerHTML = `<button class="boton" disabled>❓ Prenda no disponible</button>`;
+      }
     }
     return;
   }
   const b = document.createElement("button");
-  b.className = "boton boton-destacado";
-  b.textContent = estado === "rechazado" ? "💔 Reintentar compra" : "🛒 Comprar";
-  b.addEventListener("click", () => comprar(producto));
+  if (producto.agotado) {
+    b.className = "boton boton-agotado";
+    b.textContent = "💔 Sin stock";
+    b.disabled = true;
+  } else {
+    b.className = "boton boton-destacado";
+    b.textContent = estado === "rechazado" ? "💔 Reintentar compra" : "🛒 Comprar";
+    b.addEventListener("click", () => comprar(producto));
+  }
   zona.innerHTML = "";
   zona.appendChild(b);
 }
@@ -378,6 +409,7 @@ function mostrarErrorPiel(caja) {
 /* ---------- comprar ---------- */
 async function comprar(producto) {
   if (!firebaseListo) { toast("⚠️ La tienda no está conectada a Firebase todavía"); return; }
+  if (producto.agotado) { toast("💔 Esa prenda está agotada… ¡vuelve más tarde!"); return; }
   nombre = ($("#input-nombre").value || "").trim();
   if (!nombre) { toast("✍️ Escribe el nombre de tu personaje primero"); $("#input-nombre").focus(); return; }
   localStorage.setItem(CLAVES.nombre, nombre);
@@ -450,14 +482,16 @@ function escuchar(skinId) {
 function mostrarModalPedido(producto, datos) {
   const cuerpo = $("#cuerpo-pedido");
   let contenido = "";
+  const piezas = piezasDe(producto);
 
   if (datos.estado === "pendiente") {
     contenido = `
       <div class="estado-pedido">
         <div class="estado-grande girando">⏳</div>
-        <p class="estado-texto">Encargo enviado, <b>${datos.jugador}</b>.<br>
+        <p class="estado-texto">Encargo enviado, <b>${datos.jugador || nombre}</b>.<br>
         Pediste <b>«${producto.nombre}»</b> por <b>${producto.precioTexto}</b>.<br>
         El sastre está decidiendo si lo acepta… 🧵</p>
+        ${piezas.length ? `<p class="estado-nota">🧩 Este outfit incluye: ${piezas.map(pz => pz.nombre).join(", ")}<br>(al aceptarlo podrás descargarlo completo y también por piezas)</p>` : ""}
         <p class="estado-nota">(Puedes cerrar esta ventana: el botón de la prenda cambiará solo cuando el sastre responda.)</p>
         <button class="boton" id="boton-cerrar-estado">Esperar en silencio</button>
       </div>`;
@@ -469,7 +503,8 @@ function mostrarModalPedido(producto, datos) {
         <p class="estado-texto">¡El sastre <b>aceptó</b> tu encargo de <b>«${producto.nombre}»</b>!<br>Descarga tu prenda y vístete con orgullo.</p>
         ${imagen ? `
         <div class="descargables">
-          <a class="boton-descarga" href="${urlDescarga(imagen)}" download="${producto.id}.png">⬇️ Descargar «${producto.nombre}»</a>
+          <a class="boton-descarga" href="${urlDescarga(imagen)}" download="${producto.id}.png">⬇️ Descargar «${producto.nombre}»${piezas.length ? " (completo)" : ""}</a>
+          ${piezas.map(pz => `<a class="boton-descarga pieza-descarga" href="${urlDescarga(pz.imagen)}" download="${pz.id}.png">🧩 Descargar «${pz.nombre}»</a>`).join("")}
         </div>
         <p class="estado-nota">💡 Recuerda entregarle al sastre sus <b>${producto.precioTexto}</b> dentro del reino 😄</p>` : `
         <p class="estado-nota">😵 La prenda ya no está disponible para descargar…</p>`}
