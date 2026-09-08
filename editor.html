@@ -34,7 +34,15 @@
         <p class="login-error" id="login-error" hidden></p>
         <button class="boton boton-destacado" type="submit">Entrar al taller</button>
       </form>
-      <p class="login-pista">💡 Mismos correo y contraseña que usas en el Panel del Sastre.</p>
+      <p class="login-pista">💡 Solo el modista principal (sin @asistentes) puede entrar aquí.</p>
+    </section>
+
+    <!-- ACCESO LIMITADO (asistentes) -->
+    <section class="tarjeta-login" id="seccion-sin-acceso" hidden>
+      <h2>🚫 Acceso limitado</h2>
+      <p class="estado-texto">Esta cuenta es de <b>asistente</b>: solo puede responder encargos desde el <b>Panel del Sastre</b>.<br>El taller de edición es solo para el modista principal 🧵</p>
+      <a class="boton boton-destacado" href="admin.html">Ir al Panel de encargos</a>
+      <button class="boton boton-peligro" id="boton-salir-asistente">Salir 🚪</button>
     </section>
 
     <!-- EDITOR -->
@@ -97,13 +105,22 @@
       <label class="etiqueta-campo" for="prenda-precio">Precio — ej: «1 oro 25 plata» (o solo un número = cobre)</label>
       <input class="entrada" id="prenda-precio" type="text" placeholder="1 oro 25 plata">
       <div class="vista-previa-precio" id="previa-precio"></div>
+      <button class="boton" id="boton-sumar-piezas" type="button">🧮 Precio = suma de las piezas marcadas</button>
 
-      <label class="etiqueta-campo" for="prenda-categoria">Categoría</label>
-      <input class="entrada" id="prenda-categoria" type="text" maxlength="24" list="lista-categorias" placeholder="Ej: Magos">
+      <label class="etiqueta-campo" for="prenda-categoria">Categoría (ej: Outfit completo, Camisas, Polerones…)</label>
+      <input class="entrada" id="prenda-categoria" type="text" maxlength="24" list="lista-categorias" placeholder="Ej: Camisas">
       <datalist id="lista-categorias"></datalist>
 
       <label class="fila-check"><input type="checkbox" id="prenda-nuevo"> Mostrar cinta «¡NUEVO!»</label>
       <label class="fila-check"><input type="checkbox" id="prenda-slim"> Modelo «Alex» (brazos finos)</label>
+      <label class="fila-check"><input type="checkbox" id="prenda-agotado"> 💔 Sin stock (no se puede comprar)</label>
+
+      <label class="etiqueta-campo" for="prenda-estante">📍 Estante / stand del mundo (opcional — lo verán los jugadores como guía)</label>
+      <input class="entrada" id="prenda-estante" type="text" maxlength="24" placeholder="Ej: Estante 5">
+
+      <label class="etiqueta-campo">🧩 Piezas de este outfit (opcional)</label>
+      <p class="pista" style="text-align:left">Marca las prendas sueltas que pertenecen a este outfit. Quien compre ESTA prenda podrá descargarla completa Y por piezas. Las piezas siguen vendiéndose por separado en sus categorías.</p>
+      <div class="lista-piezas" id="lista-piezas"></div>
 
       <p class="estado-nota" id="error-prenda" hidden></p>
       <div class="modal-botones">
