@@ -1,6 +1,7 @@
 /* =========================================================
    🛠️ TALLER DEL SASTRE — no toques nada aquí
    ¡Todo se controla con los botones de la página! 🎮
+   Solo el modista principal (sin @asistentes) entra aquí.
    ========================================================= */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -33,6 +34,11 @@ let editandoId = null;
 let imagenPendiente = null;
 let visorModal = null;
 let listenerCatalogo = null;
+let piezasSeleccionadas = new Set();
+
+function esAsistente(usuario) {
+  return !!(usuario && usuario.email && usuario.email.toLowerCase().includes("@asistentes"));
+}
 
 function toast(texto) {
   const caja = $("#toasts");
@@ -89,6 +95,11 @@ function desglose(total, monedas) {
   if (!partes.length && monedas.length) partes.push({ cant: 0, moneda: monedas[0] });
   return partes;
 }
+function textoMonedas(total, monedas) {
+  const partes = desglose(total, monedas).map(p => `${p.cant} ${p.moneda.nombre}`);
+  if (partes.length === 1) return partes[0];
+  return partes.slice(0, -1).join(", ") + " y " + partes[partes.length - 1];
+}
 
 /* ---------- login ---------- */
 if (!firebaseListo) {
@@ -115,13 +126,22 @@ if (!firebaseListo) {
     }
   });
 
-  onAuthStateChanged(auth, async (usuario) => {
+  onAuthStateChanged(auth, (usuario) => {
+    if (usuario && esAsistente(usuario)) {
+      $("#seccion-login").hidden = true;
+      $("#seccion-editor").hidden = true;
+      $("#seccion-sin-acceso").hidden = false;
+      if (listenerCatalogo) { listenerCatalogo(); listenerCatalogo = null; }
+      return;
+    }
     if (usuario) {
       $("#seccion-login").hidden = true;
+      $("#seccion-sin-acceso").hidden = true;
       $("#seccion-editor").hidden = false;
-      await cargarTodo();
+      cargarTodo();
     } else {
       $("#seccion-login").hidden = false;
+      $("#seccion-sin-acceso").hidden = true;
       $("#seccion-editor").hidden = true;
       if (listenerCatalogo) { listenerCatalogo(); listenerCatalogo = null; }
     }
@@ -130,6 +150,13 @@ if (!firebaseListo) {
   $("#boton-salir").addEventListener("click", async () => {
     try { await signOut(auth); toast("Has salido del taller 🚪"); } catch (e) {}
   });
+
+  const botonSalirAsistente = document.getElementById("boton-salir-asistente");
+  if (botonSalirAsistente) {
+    botonSalirAsistente.addEventListener("click", async () => {
+      try { await signOut(auth); } catch (e) {}
+    });
+  }
 }
 
 async function cargarTodo() {
@@ -240,12 +267,18 @@ function pintarCatalogo() {
       .map(b => `<span class="moneda-badge">${b.moneda.emoji} ${b.cant}</span>`)
       .join("");
     const tarjeta = document.createElement("article");
-    tarjeta.className = "tarjeta";
+    tarjeta.className = "tarjeta" + (p.agotado ? " tarjeta-agotada" : "");
     tarjeta.innerHTML = `
+      ${p.agotado ? '<span class="cinta-agotado">SIN STOCK</span>' : ""}
       <div class="escenario escenario-mini" data-id="${p.id}" title="Arrastra para girar"></div>
       <h3 class="prenda-nombre">${p.nombre || "Sin nombre"}</h3>
       <div class="precio-monedas">${badges}</div>
-      <p class="etiquetas-editor">${p.categoria || "Sin categoría"}${p.nuevo ? " · ¡NUEVO!" : ""}${p.slim ? " · Alex" : ""}</p>
+      <p class="etiquetas-editor">
+        ${p.categoria || "Sin categoría"}
+        ${p.nuevo ? " · ¡NUEVO!" : ""}
+        ${p.estante ? ` · 📍 ${p.estante}` : ""}
+        ${p.piezas && p.piezas.length ? ` · 🧩 ${p.piezas.length} piezas` : ""}
+      </p>
       <div class="editor-botones">
         <button class="boton" data-mover="-1" title="Subir en la vitrina">⬆️</button>
         <button class="boton" data-mover="1" title="Bajar en la vitrina">⬇️</button>
@@ -351,18 +384,22 @@ async function borrarPrenda(p) {
 function abrirModalPrenda(p) {
   editandoId = p ? p.id : null;
   imagenPendiente = p ? (p.imagen || null) : null;
+  piezasSeleccionadas = new Set(p && p.piezas ? p.piezas : []);
   $("#titulo-modal").textContent = p ? "✏️ Editar prenda" : "✨ Nueva prenda";
   $("#prenda-nombre").value = p ? (p.nombre || "") : "";
   $("#prenda-precio").value = p ? (p.precio != null ? String(p.precio) : "") : "";
   $("#prenda-categoria").value = p ? (p.categoria || "") : "";
   $("#prenda-nuevo").checked = !!(p && p.nuevo);
   $("#prenda-slim").checked = !!(p && p.slim);
+  $("#prenda-agotado").checked = !!(p && p.agotado);
+  $("#prenda-estante").value = p ? (p.estante || "") : "";
   $("#error-prenda").hidden = true;
   const cats = [...new Set(crudos.map(x => x.categoria).filter(Boolean))];
   $("#lista-categorias").innerHTML = cats.map(c => `<option value="${c}">`).join("");
   $("#velo-prenda").hidden = false;
   actualizarZonaTexto();
   recargarVisor();
+  pintarListaPiezas();
   actualizarPreviaPrecio();
 }
 
@@ -372,6 +409,7 @@ function cerrarModalPrenda() {
   $("#vista-prenda").innerHTML = "";
   editandoId = null;
   imagenPendiente = null;
+  piezasSeleccionadas = new Set();
 }
 
 function actualizarZonaTexto() {
@@ -413,6 +451,48 @@ function recargarVisor() {
     })();
   } catch (e) {}
 }
+
+/* ---------- lista de piezas del outfit ---------- */
+function pintarListaPiezas() {
+  const cont = $("#lista-piezas");
+  cont.innerHTML = "";
+  const candidatos = crudos.filter(p => p.id !== editandoId);
+  if (!candidatos.length) {
+    cont.innerHTML = `<p class="etiquetas-editor">Aún no hay otras prendas para enlazar. Crea primero las piezas sueltas (camisas, pantalones…) y luego edita este outfit para enlazarlas. 🧩</p>`;
+    return;
+  }
+  const monedas = prepararMonedas(monedasDesdeFormulario());
+  candidatos.forEach(p => {
+    const cobre = interpretarPrecio(p.precio, monedas);
+    const label = document.createElement("label");
+    label.className = "fila-pieza";
+    label.innerHTML = `
+      <input type="checkbox" ${piezasSeleccionadas.has(p.id) ? "checked" : ""}>
+      ${p.imagen ? `<img src="${p.imagen}" alt="">` : ""}
+      <span class="nombre-pieza">${p.nombre || "Sin nombre"} <small>(${p.categoria || "sin categoría"})</small></span>
+      <span class="precio-pieza">${textoMonedas(cobre, monedas)}</span>
+    `;
+    const cb = label.querySelector("input");
+    cb.addEventListener("change", () => {
+      if (cb.checked) piezasSeleccionadas.add(p.id);
+      else piezasSeleccionadas.delete(p.id);
+    });
+    cont.appendChild(label);
+  });
+}
+
+ $("#boton-sumar-piezas").addEventListener("click", () => {
+  if (!piezasSeleccionadas.size) { toast("⚠️ Marca primero alguna pieza en la lista de abajo"); return; }
+  const monedas = prepararMonedas(monedasDesdeFormulario());
+  let total = 0;
+  piezasSeleccionadas.forEach(id => {
+    const p = crudos.find(x => x.id === id);
+    if (p) total += interpretarPrecio(p.precio, monedas);
+  });
+  $("#prenda-precio").value = textoMonedas(total, monedas);
+  actualizarPreviaPrecio();
+  toast("🧮 Precio = suma de las piezas. ¡Bájalo a mano si quieres darle descuento por pack! 😄");
+});
 
 /* zona de arrastre */
 const zona = $("#zona-soltar");
@@ -503,6 +583,9 @@ function actualizarPreviaPrecio() {
     categoria: categoria,
     nuevo: $("#prenda-nuevo").checked,
     slim: $("#prenda-slim").checked,
+    agotado: $("#prenda-agotado").checked,
+    estante: $("#prenda-estante").value.trim(),
+    piezas: Array.from(piezasSeleccionadas),
     imagen: imagenPendiente
   };
 
