@@ -217,6 +217,8 @@ body {
   transform: translateY(-5px);
   box-shadow: 0 12px 22px rgba(90,60,20,.28);
 }
+.tarjeta-agotada .escenario { filter: saturate(.5) brightness(.96); }
+
 .cinta-nuevo {
   position: absolute;
   top: -10px;
@@ -232,6 +234,22 @@ body {
   box-shadow: 0 3px 6px rgba(0,0,0,.3);
   letter-spacing: 1px;
 }
+.cinta-agotado {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 5;
+  background: linear-gradient(180deg, #8d8d8d, #5f5f5f);
+  color: #fff;
+  font-weight: 800;
+  font-size: .72rem;
+  padding: 4px 12px;
+  border-radius: 8px;
+  transform: rotate(8deg);
+  box-shadow: 0 3px 6px rgba(0,0,0,.3);
+  letter-spacing: 1px;
+}
+
 .escenario {
   position: relative;
   height: 200px;
@@ -268,13 +286,13 @@ body {
   justify-content: center;
 }
 
-/* ---------- Precio en monedas ---------- */
+/* ---------- Precio en monedas / estante / piezas ---------- */
 .precio-monedas {
   display: flex;
   gap: 6px;
   justify-content: center;
   flex-wrap: wrap;
-  margin: 6px 0 8px;
+  margin: 6px 0 4px;
   min-height: 28px;
 }
 .moneda-badge {
@@ -285,6 +303,24 @@ body {
   font-weight: 800;
   color: #7a5a10;
   font-size: .95rem;
+}
+
+.estante-badge {
+  display: inline-block;
+  font-size: .8rem;
+  color: #6b4a1e;
+  font-weight: 700;
+  background: #fff6dd;
+  border: 2px dashed var(--oro-borde);
+  border-radius: 8px;
+  padding: 2px 10px;
+  margin: 2px 0 4px;
+}
+.nota-piezas {
+  font-size: .72rem;
+  color: var(--tinta-suave);
+  font-weight: 600;
+  margin: 0 0 4px;
 }
 
 /* ---------- Botones ---------- */
@@ -323,6 +359,12 @@ body {
   background: linear-gradient(180deg, #f2dfa5, #e3c778);
   border-color: var(--oro-oscuro);
   color: #7a5a10;
+}
+.boton-agotado {
+  background: linear-gradient(180deg, #d8d3c5, #b3ac9c);
+  border-color: #7a7263;
+  color: #5c574b;
+  box-shadow: 0 4px 0 #7a7263;
 }
 .zona-accion { margin-top: 8px; }
 .zona-accion .boton { width: 100%; }
@@ -377,6 +419,12 @@ body {
   box-shadow: 0 4px 0 var(--verde);
 }
 .boton-descarga:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--verde); }
+.pieza-descarga {
+  border-color: var(--oro-oscuro);
+  background: linear-gradient(180deg, #fff3d4, #f0d992);
+  color: #5c3f12;
+  box-shadow: 0 4px 0 var(--oro-oscuro);
+}
 
 /* ---------- Toasts ---------- */
 #toasts {
@@ -593,6 +641,40 @@ body {
 
 .etiquetas-editor { font-size: .78rem; color: var(--tinta-suave); font-weight: 700; margin: 2px 0 6px; }
 
+/* lista de piezas del outfit */
+.lista-piezas {
+  max-height: 190px;
+  overflow-y: auto;
+  border: 2px dashed #d9c48c;
+  border-radius: 10px;
+  padding: 8px;
+  text-align: left;
+  background: #fffdf3;
+  margin-bottom: 8px;
+}
+.fila-pieza {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.fila-pieza:hover { background: #fff6dd; }
+.fila-pieza input { width: 18px; height: 18px; accent-color: var(--verde); flex-shrink: 0; cursor: pointer; }
+.fila-pieza img {
+  width: 36px; height: 36px;
+  image-rendering: pixelated;
+  border: 2px solid var(--oro-borde);
+  border-radius: 6px;
+  background: #fff;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.fila-pieza .nombre-pieza { font-weight: 700; color: var(--tinta-media); flex: 1; }
+.fila-pieza .nombre-pieza small { color: var(--tinta-suave); font-weight: 600; }
+.fila-pieza .precio-pieza { font-size: .8rem; color: var(--tinta-suave); font-weight: 700; }
+
 /* ---------- Animaciones ---------- */
 @keyframes aparecer { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes flotar { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
@@ -608,5 +690,4 @@ body {
   .cuerda { display: none; }
   .leyenda-monedas { font-size: .78rem; }
   .fila-moneda { grid-template-columns: 54px 1fr 84px 38px; }
-  .pedido-franja { flex-direction: row; }
 }
