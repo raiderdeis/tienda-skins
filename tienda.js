@@ -35,14 +35,17 @@ const CLAVES = { nombre: "sastre_nombre", pedidos: "sastre_pedidos" };
 let nombre = localStorage.getItem(CLAVES.nombre) || "";
 let misPedidos = {};
 try { misPedidos = JSON.parse(localStorage.getItem(CLAVES.pedidos) || "{}") || {}; } catch (e) { misPedidos = {}; }
-let categoriaActiva = "Todo";
+let categoriaActiva = null;
 let crudos = [];
 let catalogo = [];
 const escuchas = {};
 
 const ICONOS_CATEGORIA = {
-  "Todo": "🛍️", "Outfit completo": "🧵", "Cuerpo completo": "🧵", "Caballeros": "⚔️", "Magos": "🧙",
-  "Vestidos": "👗", "Aldeanos": "🧑‍🌾", "Disfraces": "🎭", "Nobles": "👑", "Aventureros": "🗺️"
+  "Outfit completo": "🧵", "Cuerpo completo": "🧵",
+  "Camisas": "👕", "Polerones": "🧥", "Chaquetas": "🧥", "Capas": "🧣",
+  "Pantalones": "👖", "Zapatos": "👞", "Sombreros": "🎩",
+  "Caballeros": "⚔️", "Magos": "🧙", "Vestidos": "👗",
+  "Aldeanos": "🧑‍🌾", "Disfraces": "🎭", "Nobles": "👑", "Aventureros": "🗺️"
 };
 
 /* ---------- monedas ---------- */
@@ -217,17 +220,17 @@ function reconstruirCatalogo() {
     const cobre = interpretarPrecio(p.precio, MONEDAS);
     return { ...p, precioCobre: cobre, precioTexto: textoMonedas(cobre, MONEDAS) };
   });
-  const cats = new Set(catalogo.map(p => p.categoria));
-  if (categoriaActiva !== "Todo" && !cats.has(categoriaActiva)) categoriaActiva = "Todo";
+  const cats = [...new Set(catalogo.map(p => p.categoria))];
+  if (!cats.includes(categoriaActiva)) categoriaActiva = cats[0] || null;
   pintarCategorias();
   pintarRejilla();
 }
 
 function pintarCategorias() {
-  const lista = catalogo.length ? ["Todo", ...new Set(catalogo.map(p => p.categoria))] : ["Todo"];
+  const cats = [...new Set(catalogo.map(p => p.categoria))];
   const nav = $("#categorias");
   nav.innerHTML = "";
-  lista.forEach(cat => {
+  cats.forEach(cat => {
     const b = document.createElement("button");
     b.className = "chip" + (cat === categoriaActiva ? " activo" : "");
     b.textContent = `${ICONOS_CATEGORIA[cat] || "✨"} ${cat}`;
@@ -248,11 +251,9 @@ function pintarRejilla() {
   });
   rejilla.innerHTML = "";
 
-  const lista = catalogo.filter(p => categoriaActiva === "Todo" || p.categoria === categoriaActiva);
+  const lista = catalogo.filter(p => p.categoria === categoriaActiva);
   if (!lista.length) {
-    rejilla.innerHTML = `<p class="vacio">🧵 ${firebaseListo
-      ? "El sastre aún no ha cosido ninguna prenda… ¡modista, créalas desde el taller! ✨"
-      : "El sastre aún no ha cosido ninguna prenda… 🐛"}</p>`;
+    rejilla.innerHTML = `<p class="vacio">🧵 El sastre aún no ha cosido ninguna prenda…</p>`;
     return;
   }
   lista.forEach(p => {
@@ -265,7 +266,7 @@ function pintarRejilla() {
     const piezasNota = (p.piezas && p.piezas.length)
       ? `<p class="nota-piezas">🧩 Incluye ${p.piezas.length} piezas (también se venden sueltas)</p>`
       : "";
-    const estante = p.estante
+    const maniqui = p.estante
       ? `<p class="estante-badge">📍 ${p.estante}</p>`
       : "";
     tarjeta.innerHTML = `
@@ -274,7 +275,7 @@ function pintarRejilla() {
       <div class="escenario" data-id="${p.id}" title="Arrastra para girar la figura"></div>
       <h3 class="prenda-nombre">${p.nombre || "Sin nombre"}</h3>
       <div class="precio-monedas">${badges}</div>
-      ${estante}
+      ${maniqui}
       ${piezasNota}
       <div class="zona-accion"></div>
     `;
