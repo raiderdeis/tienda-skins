@@ -192,8 +192,9 @@ function avisarNuevoPedido(d) {
 
 /* ---------- pintar la lista ---------- */
 function pintarPedidos(pedidos) {
-  const validos = pedidos.filter(p => p.nombreSkin);
-  const viejos = pedidos.filter(p => !p.nombreSkin);
+  const visibles = pedidos.filter(p => !p.oculto);
+  const validos = visibles.filter(p => p.nombreSkin);
+  const viejos = visibles.filter(p => !p.nombreSkin);
   const pendientes = validos.filter(p => p.estado === "pendiente");
   const decididos = validos.filter(p => p.estado !== "pendiente");
 
@@ -244,13 +245,31 @@ function tarjetaPedido(p, pendiente) {
              <button class="boton boton-destacado" data-accion="aceptar">✅ Aceptar</button>
              <button class="boton boton-peligro" data-accion="rechazar">🚫 Rechazar</button>
            </div>`
-        : `<span class="pedido-estado ${p.estado === "aceptado" ? "estado-aceptado" : "estado-rechazado"}">${p.estado === "aceptado" ? "✅ Aceptado" : "🚫 Rechazado"}</span>`}
+        : `<div class="pedido-botones">
+             <span class="pedido-estado ${p.estado === "aceptado" ? "estado-aceptado" : "estado-rechazado"}">${p.estado === "aceptado" ? "✅ Aceptado" : "🚫 Rechazado"}</span>
+             <button class="boton boton-peligro" data-ocultar="1" title="Quitar del historial" style="padding:4px 12px">🗑️</button>
+           </div>`}
     </div>
   `;
   if (pendiente) {
     el.querySelectorAll("[data-accion]").forEach(b => {
       b.addEventListener("click", () => decidir(p, b.dataset.accion, b));
     });
+  } else {
+    const botonOcultar = el.querySelector("[data-ocultar]");
+    if (botonOcultar) {
+      botonOcultar.addEventListener("click", async () => {
+        if (!confirm(`¿Quitar del historial el encargo de ${p.jugador || "este jugador"}?\n\n(Solo lo esconde de tu panel: si el jugador aún no ha descargado su prenda, seguirá pudiendo hacerlo.)`)) return;
+        botonOcultar.disabled = true;
+        try {
+          await updateDoc(doc(db, "pedidos", p.id), { oculto: true });
+          toast("🗑️ Encargo quitado del historial");
+        } catch (err) {
+          botonOcultar.disabled = false;
+          toast("⚠️ No se pudo quitar: " + (err.message || err));
+        }
+      });
+    }
   }
   return el;
 }
