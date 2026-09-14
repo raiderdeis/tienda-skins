@@ -104,6 +104,65 @@ function textoMonedas(total, monedas) {
   return partes.slice(0, -1).join(", ") + " y " + partes[partes.length - 1];
 }
 
+/* ---------- 🩹 ARREGLO DE PÍXELES ----------
+   Analiza la skin antes de mostrarla:
+   - Si está en formato antiguo (64x32 y familia), la convierte
+     al moderno (64x64) para que el muñeco se vea bien.
+     (El archivo que descargan los jugadores NO se toca.)
+   - Detecta si es modelo Alex (brazos finos) mirando
+     las columnas de píxeles que solo usa el modelo Steve. */
+function analizarSkin(dataUrl) {
+  return new Promise((resolver) => {
+    const img = new Image();
+    img.onload = () => {
+      const ancho = img.width, alto = img.height;
+      const escala = ancho / 64;
+      const valida = Number.isInteger(escala) && escala >= 1;
+      let lienzo = null, ctx = null, legado = false;
+
+      if (valida && ancho === alto * 2) {
+        // formato antiguo (64x32, 128x64...) → convertir al moderno
+        legado = true;
+        lienzo = document.createElement("canvas");
+        lienzo.width = ancho;
+        lienzo.height = alto * 2;
+        ctx = lienzo.getContext("2d");
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, 0, 0);
+        // copiar pierna derecha → hueco de la pierna izquierda
+        ctx.drawImage(img, 0, 16 * escala, 16 * escala, 16 * escala, 16 * escala, 48 * escala, 16 * escala, 16 * escala);
+        // copiar brazo derecho → hueco del brazo izquierdo
+        ctx.drawImage(img, 40 * escala, 16 * escala, 16 * escala, 16 * escala, 32 * escala, 48 * escala, 16 * escala, 16 * escala);
+      } else if (valida && ancho === alto) {
+        // formato moderno: solo la leemos para detectar el modelo
+        lienzo = document.createElement("canvas");
+        lienzo.width = ancho;
+        lienzo.height = alto;
+        ctx = lienzo.getContext("2d");
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, 0, 0);
+      } else {
+        resolver({ imagen: dataUrl, slim: false, legado: false, formatoRaro: true });
+        return;
+      }
+
+      const t = escala;
+      const vacio = (x, y) => {
+        try { return ctx.getImageData(Math.round(x * t), Math.round(y * t), 1, 1).data[3] === 0; }
+        catch (e) { return false; }
+      };
+      const slim = vacio(50, 16) && vacio(54, 20) && vacio(42, 48) && vacio(46, 52);
+
+      resolver({
+        imagen: legado ? lienzo.toDataURL("image/png") : dataUrl,
+        slim, legado, formatoRaro: false
+      });
+    };
+    img.onerror = () => resolver({ imagen: dataUrl, slim: false, legado: false, formatoRaro: true });
+    img.src = dataUrl;
+  });
+}
+
 /* ---------- descargas (la imagen vive en la base de datos) ---------- */
 function urlDescarga(imagen) {
   try {
@@ -247,6 +306,7 @@ function pintarRejilla() {
   const rejilla = $("#rejilla");
   rejilla.querySelectorAll(".escenario").forEach(caja => {
     observadorVisores.unobserve(caja);
+    caja._destruido = true;
     if (caja._visor) { try { caja._visor.dispose(); } catch (e) {} caja._visor = null; }
   });
   rejilla.innerHTML = "";
@@ -335,15 +395,21 @@ function pintarAccion(producto) {
   zona.appendChild(b);
 }
 
-/* ---------- muñecos 3D ---------- */
+/* ---------- muñecos 3D (con el arreglo de píxeles) ---------- */
 const observadorVisores = new IntersectionObserver((entradas) => {
   entradas.forEach(en => {
     const caja = en.target;
     if (en.isIntersecting) {
-      if (!caja._visor) caja._visor = crearVisor(caja);
-      if (caja._visor) caja._visor.renderPaused = false;
-    } else if (caja._visor) {
-      caja._visor.renderPaused = true;
+      caja._visible = true;
+      if (!caja._visor && !caja._cargando) {
+        caja._cargando = true;
+        crearVisor(caja);
+      } else if (caja._visor) {
+        caja._visor.renderPaused = false;
+      }
+    } else {
+      caja._visible = false;
+      if (caja._visor) caja._visor.renderPaused = true;
     }
   });
 }, { rootMargin: "150px" });
@@ -357,46 +423,52 @@ function observarEscenarios() {
 function crearVisor(caja) {
   const producto = productoDe(caja.dataset.id);
   if (!producto || !producto.imagen || typeof skinview3d === "undefined") {
+    caja._cargando = false;
     mostrarErrorPiel(caja);
-    return null;
+    return;
   }
   const canvas = document.createElement("canvas");
   caja.appendChild(canvas);
-  try {
-    const visor = new skinview3d.SkinViewer({
-      canvas: canvas,
-      width: caja.clientWidth || 160,
-      height: caja.clientHeight || 200
-    });
-    const carga = producto.slim
-      ? visor.loadSkin(producto.imagen, { model: "slim" })
-      : visor.loadSkin(producto.imagen);
-    if (carga && typeof carga.catch === "function") {
-      carga.catch(() => {
-        mostrarErrorPiel(caja);
-        try { visor.renderPaused = true; } catch (e) {}
+  analizarSkin(producto.imagen).then(analisis => {
+    caja._cargando = false;
+    if (caja._destruido || !caja.isConnected) return;
+    try {
+      const visor = new skinview3d.SkinViewer({
+        canvas: canvas,
+        width: caja.clientWidth || 160,
+        height: caja.clientHeight || 200
       });
+      const carga = producto.slim
+        ? visor.loadSkin(analisis.imagen, { model: "slim" })
+        : visor.loadSkin(analisis.imagen);
+      if (carga && typeof carga.catch === "function") {
+        carga.catch(() => {
+          mostrarErrorPiel(caja);
+          try { visor.renderPaused = true; } catch (e) {}
+        });
+      }
+      try {
+        visor.controls.enableZoom = false;
+        visor.controls.enablePan = false;
+        visor.controls.enableRotate = true;
+      } catch (e) {}
+      try {
+        visor.animation = new skinview3d.WalkingAnimation();
+        visor.animation.speed = 0.7;
+      } catch (e) {}
+      caja._visor = visor;
+      if (!caja._visible) visor.renderPaused = true;
+      let girando = true;
+      canvas.addEventListener("pointerdown", () => { girando = false; });
+      (function girar() {
+        if (!caja.isConnected) return;
+        if (girando && visor.player && !visor.renderPaused) visor.player.rotation.y += 0.011;
+        requestAnimationFrame(girar);
+      })();
+    } catch (e) {
+      mostrarErrorPiel(caja);
     }
-    try {
-      visor.controls.enableZoom = false;
-      visor.controls.enablePan = false;
-      visor.controls.enableRotate = true;
-    } catch (e) {}
-    try {
-      visor.animation = new skinview3d.WalkingAnimation();
-      visor.animation.speed = 0.7;
-    } catch (e) {}
-    let girando = true;
-    canvas.addEventListener("pointerdown", () => { girando = false; });
-    (function girar() {
-      if (girando && visor.player) visor.player.rotation.y += 0.011;
-      requestAnimationFrame(girar);
-    })();
-    return visor;
-  } catch (e) {
-    mostrarErrorPiel(caja);
-    return null;
-  }
+  });
 }
 
 function mostrarErrorPiel(caja) {
