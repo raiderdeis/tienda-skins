@@ -36,6 +36,14 @@ let visorModal = null;
 let listenerCatalogo = null;
 let piezasSeleccionadas = new Set();
 let tokenVista = 0;
+let outfitDeNuevaPieza = null; // id del outfit cuando creas una pieza desde su carpeta
+
+/* 📂 carpetas abiertas en el catálogo (se recuerdan) */
+let carpetasAbiertas = new Set();
+try { carpetasAbiertas = new Set(JSON.parse(localStorage.getItem("sastre_carpetas") || "[]")); } catch (e) {}
+function guardarCarpetas() {
+  try { localStorage.setItem("sastre_carpetas", JSON.stringify([...carpetasAbiertas])); } catch (e) {}
+}
 
 function esAsistente(usuario) {
   return !!(usuario && usuario.email && usuario.email.toLowerCase().includes("@asistentes"));
@@ -151,6 +159,14 @@ function analizarSkin(dataUrl) {
   });
 }
 
+/* ---------- orden ---------- */
+function porOrden(a, b) {
+  const oa = typeof a.orden === "number" ? a.orden : 9999;
+  const ob = typeof b.orden === "number" ? b.orden : 9999;
+  if (oa !== ob) return oa - ob;
+  return String(a.nombre || "").localeCompare(String(b.nombre || ""));
+}
+
 /* ---------- login ---------- */
 if (!firebaseListo) {
   const err = $("#login-error");
@@ -211,6 +227,16 @@ if (!firebaseListo) {
 
 async function cargarTodo() {
   if (listenerCatalogo) return;
+
+  if (!document.getElementById("pista-carpetas")) {
+    const p = document.createElement("p");
+    p.id = "pista-carpetas";
+    p.className = "pista";
+    p.style.textAlign = "center";
+    p.innerHTML = "📂 Los outfits con piezas se muestran como carpetas: pulsa «Ver piezas» para desplegarlas, editarlas, moverlas o añadir más.";
+    $("#lista-editor").insertAdjacentElement("beforebegin", p);
+  }
+
   try {
     const snap = await getDoc(doc(db, "configuracion", "tienda"));
     pintarFormularioConfig(snap.exists() ? snap.data() : {});
@@ -289,7 +315,7 @@ function monedasDesdeFormulario() {
   }
 });
 
-/* ---------- catálogo ---------- */
+/* ---------- catálogo (con carpetas de outfits 📂) ---------- */
 function pintarCatalogo() {
   const cont = $("#lista-editor");
   cont.querySelectorAll(".escenario").forEach(caja => {
@@ -300,51 +326,124 @@ function pintarCatalogo() {
   cont.innerHTML = "";
 
   const monedas = prepararMonedas(monedasDesdeFormulario());
-  const lista = crudos.slice().sort((a, b) => {
-    const oa = typeof a.orden === "number" ? a.orden : 9999;
-    const ob = typeof b.orden === "number" ? b.orden : 9999;
-    if (oa !== ob) return oa - ob;
-    return String(a.nombre || "").localeCompare(String(b.nombre || ""));
-  });
+  const lista = crudos.slice().sort(porOrden);
 
   if (!lista.length) {
     cont.innerHTML = `<p class="vacio">Aún no hay prendas… ¡pulsa «✨ Añadir nueva prenda» para crear la primera! 🧵</p>`;
     return;
   }
 
+  // prendas que son pieza de algún outfit (no se muestran sueltas)
+  const enOutfit = new Set();
   lista.forEach(p => {
-    const cobre = interpretarPrecio(p.precio, monedas);
-    const badges = desglose(cobre, monedas)
-      .map(b => `<span class="moneda-badge">${b.moneda.emoji} ${b.cant}</span>`)
-      .join("");
-    const tarjeta = document.createElement("article");
-    tarjeta.className = "tarjeta" + (p.agotado ? " tarjeta-agotada" : "");
-    tarjeta.innerHTML = `
-      ${p.agotado ? '<span class="cinta-agotado">SIN STOCK</span>' : ""}
-      <div class="escenario escenario-mini" data-id="${p.id}" title="Arrastra para girar"></div>
-      <h3 class="prenda-nombre">${p.nombre || "Sin nombre"}</h3>
-      <div class="precio-monedas">${badges}</div>
-      <p class="etiquetas-editor">
-        ${p.categoria || "Sin categoría"}
-        ${p.nuevo ? " · ¡NUEVO!" : ""}
-        ${p.estante ? ` · 📍 ${p.estante}` : ""}
-        ${p.piezas && p.piezas.length ? ` · 🧩 ${p.piezas.length} piezas` : ""}
-      </p>
-      <div class="editor-botones">
-        <button class="boton" data-mover="-1" title="Subir en la vitrina">⬆️</button>
-        <button class="boton" data-mover="1" title="Bajar en la vitrina">⬇️</button>
-        <button class="boton" data-editar="1" title="Editar">✏️</button>
-        <button class="boton boton-peligro" data-borrar="1" title="Borrar">🗑️</button>
-      </div>
-    `;
-    tarjeta.querySelector("[data-editar]").addEventListener("click", () => abrirModalPrenda(p));
-    tarjeta.querySelector("[data-borrar]").addEventListener("click", () => borrarPrenda(p));
-    tarjeta.querySelectorAll("[data-mover]").forEach(b => {
-      b.addEventListener("click", () => moverPrenda(p.id, parseInt(b.dataset.mover, 10)));
-    });
-    cont.appendChild(tarjeta);
+    if (p.piezas && p.piezas.length) {
+      p.piezas.forEach(id => { if (lista.some(x => x.id === id)) enOutfit.add(id); });
+    }
+  });
+
+  lista.forEach(p => {
+    if (p.piezas && p.piezas.length) {
+      cont.appendChild(crearGrupoOutfit(p, monedas));
+    } else if (!enOutfit.has(p.id)) {
+      cont.appendChild(crearTarjetaEditor(p, monedas, "suelta", null));
+    }
   });
   observarLista();
+}
+
+function crearGrupoOutfit(outfit, monedas) {
+  const grupo = document.createElement("section");
+  grupo.className = "grupo-outfit";
+
+  const piezas = (outfit.piezas || [])
+    .map(id => crudos.find(c => c.id === id))
+    .filter(Boolean)
+    .sort(porOrden);
+
+  const abierta = carpetasAbiertas.has(outfit.id);
+
+  const cabecera = document.createElement("div");
+  cabecera.className = "grupo-cabecera";
+  const titulo = document.createElement("span");
+  titulo.className = "grupo-titulo";
+  titulo.textContent = `🧵 Outfit «${outfit.nombre || "Sin nombre"}» — ${piezas.length} ${piezas.length === 1 ? "pieza" : "piezas"}`;
+  const botonCarpeta = document.createElement("button");
+  botonCarpeta.type = "button";
+  botonCarpeta.className = "boton";
+  botonCarpeta.textContent = abierta ? "📂 Ocultar piezas" : `📂 Ver piezas (${piezas.length})`;
+  botonCarpeta.addEventListener("click", () => {
+    if (carpetasAbiertas.has(outfit.id)) carpetasAbiertas.delete(outfit.id);
+    else carpetasAbiertas.add(outfit.id);
+    guardarCarpetas();
+    pintarCatalogo();
+  });
+  cabecera.appendChild(titulo);
+  cabecera.appendChild(botonCarpeta);
+  grupo.appendChild(cabecera);
+
+  const rejilla = document.createElement("div");
+  rejilla.className = "rejilla";
+  grupo.appendChild(rejilla);
+
+  rejilla.appendChild(crearTarjetaEditor(outfit, monedas, "outfit", null));
+
+  if (abierta) {
+    piezas.forEach(pz => rejilla.appendChild(crearTarjetaEditor(pz, monedas, "pieza", outfit.id)));
+    rejilla.appendChild(crearTarjetaAnadirPieza(outfit));
+  }
+  return grupo;
+}
+
+function crearTarjetaEditor(p, monedas, modo, outfitId) {
+  const esOutfit = modo === "outfit";
+  const esPieza = modo === "pieza";
+  const cobre = interpretarPrecio(p.precio, monedas);
+  const badges = desglose(cobre, monedas)
+    .map(b => `<span class="moneda-badge">${b.moneda.emoji} ${b.cant}</span>`)
+    .join("");
+  const tarjeta = document.createElement("article");
+  tarjeta.className = "tarjeta"
+    + (p.agotado ? " tarjeta-agotada" : "")
+    + (esOutfit ? " tarjeta-outfit" : "")
+    + (esPieza ? " tarjeta-pieza" : "");
+  tarjeta.innerHTML = `
+    ${esPieza ? '<span class="cinta-pieza">🧩 PIEZA</span>' : (p.nuevo ? '<span class="cinta-nuevo">¡NUEVO!</span>' : "")}
+    ${p.agotado ? '<span class="cinta-agotado">SIN STOCK</span>' : ""}
+    <div class="escenario escenario-mini" data-id="${p.id}" title="Arrastra para girar"></div>
+    <h3 class="prenda-nombre">${p.nombre || "Sin nombre"}</h3>
+    <div class="precio-monedas">${badges}</div>
+    <p class="etiquetas-editor">
+      ${p.categoria || "Sin categoría"}
+      ${esOutfit ? " · 🧵 outfit" : ""}
+      ${p.estante ? ` · 📍 ${p.estante}` : ""}
+    </p>
+    <div class="editor-botones">
+      <button class="boton" data-mover="-1" title="${esPieza ? "Subir dentro del outfit" : "Subir en la lista"}">⬆️</button>
+      <button class="boton" data-mover="1" title="${esPieza ? "Bajar dentro del outfit" : "Bajar en la lista"}">⬇️</button>
+      <button class="boton" data-editar="1" title="Editar">✏️</button>
+      <button class="boton boton-peligro" data-borrar="1" title="Borrar">🗑️</button>
+    </div>
+  `;
+  tarjeta.querySelector("[data-editar]").addEventListener("click", () => abrirModalPrenda(p));
+  tarjeta.querySelector("[data-borrar]").addEventListener("click", () => borrarPrenda(p));
+  tarjeta.querySelectorAll("[data-mover]").forEach(b => {
+    b.addEventListener("click", () => {
+      const dir = parseInt(b.dataset.mover, 10);
+      if (esPieza && outfitId) moverPiezaEnOutfit(outfitId, p.id, dir);
+      else moverPrenda(p.id, dir);
+    });
+  });
+  return tarjeta;
+}
+
+function crearTarjetaAnadirPieza(outfit) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "tarjeta tarjeta-anadir-pieza";
+  b.title = "Crear una pieza nueva y añadirla a este outfit";
+  b.innerHTML = `<span class="anadir-pieza-texto">➕<br><span>Añadir pieza<br>a este outfit</span></span>`;
+  b.addEventListener("click", () => abrirModalPrenda(null, outfit.id));
+  return b;
 }
 
 /* ---------- visores 3D de la lista (con análisis de skin) ---------- */
@@ -409,14 +508,9 @@ function crearVisorLista(caja) {
   });
 }
 
-/* ---------- mover y borrar ---------- */
+/* ---------- mover ---------- */
 async function moverPrenda(id, dir) {
-  const lista = crudos.slice().sort((a, b) => {
-    const oa = typeof a.orden === "number" ? a.orden : 9999;
-    const ob = typeof b.orden === "number" ? b.orden : 9999;
-    if (oa !== ob) return oa - ob;
-    return String(a.nombre || "").localeCompare(String(b.nombre || ""));
-  });
+  const lista = crudos.slice().sort(porOrden);
   const i = lista.findIndex(p => p.id === id);
   const j = i + dir;
   if (i < 0 || j < 0 || j >= lista.length) return;
@@ -432,10 +526,48 @@ async function moverPrenda(id, dir) {
   }
 }
 
+async function moverPiezaEnOutfit(outfitId, piezaId, dir) {
+  const outfit = crudos.find(x => x.id === outfitId);
+  if (!outfit || !outfit.piezas) return;
+  const piezas = outfit.piezas
+    .map(id => crudos.find(c => c.id === id))
+    .filter(Boolean)
+    .sort(porOrden);
+  const i = piezas.findIndex(x => x.id === piezaId);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= piezas.length) return;
+  const a = piezas[i], b = piezas[j];
+  const oa = typeof a.orden === "number" ? a.orden : 9999;
+  const ob = typeof b.orden === "number" ? b.orden : 9999;
+  try {
+    const lote = writeBatch(db);
+    if (oa === ob) {
+      lote.update(doc(db, "catalogo", b.id), { orden: ob + (dir > 0 ? -0.5 : 0.5) });
+    } else {
+      lote.update(doc(db, "catalogo", a.id), { orden: ob });
+      lote.update(doc(db, "catalogo", b.id), { orden: oa });
+    }
+    await lote.commit();
+  } catch (e) {
+    toast("⚠️ No se pudo mover: " + (e.message || e));
+  }
+}
+
+/* ---------- borrar ---------- */
 async function borrarPrenda(p) {
-  if (!confirm(`¿Borrar «${p.nombre || "esta prenda"}» de la vitrina?\n\n(Los jugadores con encargos ya ACEPTADOS podrán seguir descargándola.)`)) return;
+  const esOutfit = p.piezas && p.piezas.length;
+  let msg = `¿Borrar «${p.nombre || "esta prenda"}» de la vitrina?\n\n(Los jugadores con encargos ya ACEPTADOS podrán seguir descargándola.)`;
+  if (esOutfit) msg += `\n\n(Sus ${p.piezas.length} piezas quedarán como prendas sueltas en la lista.)`;
+  if (!confirm(msg)) return;
   try {
     await deleteDoc(doc(db, "catalogo", p.id));
+    // si era pieza de algún outfit, quitar la referencia
+    const outfits = crudos.filter(x => x.piezas && x.piezas.includes(p.id));
+    for (const o of outfits) {
+      try {
+        await updateDoc(doc(db, "catalogo", o.id), { piezas: o.piezas.filter(id => id !== p.id) });
+      } catch (e2) {}
+    }
     toast("🗑️ Prenda borrada de la vitrina");
   } catch (e) {
     toast("⚠️ No se pudo borrar: " + (e.message || e));
@@ -459,7 +591,7 @@ async function borrarPrenda(p) {
     }
     if (!revisadas) toast("Aún no hay prendas con imagen para revisar 🧵");
     else if (!arregladas) toast(`🩹 Revisé ${revisadas} prendas: ¡todas estaban bien! ✨`);
-    else toast(`🩹 ${revisadas} revisadas — ${arregladas} ${arregladas === 1 ? "vista arreglada" : "vistas arregladas"} ✨ (las skins de formato antiguo ya se arreglan solas al mostrarse)`);
+    else toast(`🩹 ${revisadas} revisadas — ${arregladas} ${arregladas === 1 ? "vista arreglada" : "vistas arregladas"} ✨`);
   } catch (e) {
     toast("⚠️ " + (e.message || e));
   }
@@ -467,8 +599,9 @@ async function borrarPrenda(p) {
 });
 
 /* ---------- modal de prenda ---------- */
-function abrirModalPrenda(p) {
+function abrirModalPrenda(p, outfitIdParaPieza) {
   editandoId = p ? p.id : null;
+  outfitDeNuevaPieza = (!p && outfitIdParaPieza) ? outfitIdParaPieza : null;
   imagenPendiente = p ? (p.imagen || null) : null;
   piezasSeleccionadas = new Set(p && p.piezas ? p.piezas : []);
   $("#titulo-modal").textContent = p ? "✏️ Editar prenda" : "✨ Nueva prenda";
@@ -488,7 +621,6 @@ function abrirModalPrenda(p) {
   pintarListaPiezas();
   actualizarPreviaPrecio();
 
-  // si es una prenda existente, revisar si su modelo Steve/Alex estaba mal anotado
   if (p && p.imagen) {
     analizarSkin(p.imagen).then(a => {
       if (editandoId !== p.id || $("#velo-prenda").hidden) return;
@@ -510,6 +642,7 @@ function cerrarModalPrenda() {
   editandoId = null;
   imagenPendiente = null;
   piezasSeleccionadas = new Set();
+  outfitDeNuevaPieza = null;
 }
 
 function actualizarZonaTexto() {
@@ -558,24 +691,27 @@ function recargarVisor() {
   });
 }
 
-/* ---------- lista de piezas del outfit ---------- */
+/* ---------- lista de piezas del outfit (dentro del modal) ---------- */
 function pintarListaPiezas() {
   const cont = $("#lista-piezas");
   cont.innerHTML = "";
-  const candidatos = crudos.filter(p => p.id !== editandoId);
+  // candidatos: cualquier prenda que no sea este ni otro outfit
+  const candidatos = crudos.filter(p => p.id !== editandoId && !(p.piezas && p.piezas.length));
   if (!candidatos.length) {
-    cont.innerHTML = `<p class="etiquetas-editor">Aún no hay otras prendas para enlazar. Crea primero las piezas sueltas (camisas, pantalones…) y luego edita este outfit para enlazarlas. 🧩</p>`;
+    cont.innerHTML = `<p class="etiquetas-editor">Aún no hay prendas sueltas para enlazar. Crea primero las piezas (o usa el botón «➕ Añadir pieza» dentro de la carpeta del outfit) 🧩</p>`;
     return;
   }
   const monedas = prepararMonedas(monedasDesdeFormulario());
   candidatos.forEach(p => {
     const cobre = interpretarPrecio(p.precio, monedas);
+    const otroOutfit = crudos.find(x => x.id !== editandoId && x.piezas && x.piezas.includes(p.id));
+    const nota = otroOutfit ? ` · ya en «${otroOutfit.nombre}»` : "";
     const label = document.createElement("label");
     label.className = "fila-pieza";
     label.innerHTML = `
       <input type="checkbox" ${piezasSeleccionadas.has(p.id) ? "checked" : ""}>
       ${p.imagen ? `<img src="${p.imagen}" alt="">` : ""}
-      <span class="nombre-pieza">${p.nombre || "Sin nombre"} <small>(${p.categoria || "sin categoría"})</small></span>
+      <span class="nombre-pieza">${p.nombre || "Sin nombre"} <small>(${p.categoria || "sin categoría"}${nota})</small></span>
       <span class="precio-pieza">${textoMonedas(cobre, monedas)}</span>
     `;
     const cb = label.querySelector("input");
@@ -625,7 +761,6 @@ function cargarArchivo(f) {
     imagenPendiente = lector.result;
     actualizarZonaTexto();
     recargarVisor();
-    // detectar solito el modelo Steve/Alex y avisar si es formato antiguo
     analizarSkin(imagenPendiente).then(a => {
       if ($("#velo-prenda").hidden || !imagenPendiente) return;
       if ($("#prenda-slim").checked !== a.slim) {
@@ -705,8 +840,20 @@ function actualizarPreviaPrecio() {
       toast("✅ Prenda actualizada");
     } else {
       const maxOrden = crudos.reduce((m, p) => Math.max(m, typeof p.orden === "number" ? p.orden : 0), 0);
-      await addDoc(collection(db, "catalogo"), { ...datos, orden: maxOrden + 1 });
-      toast("✨ ¡Prenda añadida a la vitrina!");
+      const ref = await addDoc(collection(db, "catalogo"), { ...datos, orden: maxOrden + 1 });
+      if (outfitDeNuevaPieza) {
+        const outfit = crudos.find(x => x.id === outfitDeNuevaPieza);
+        if (outfit) {
+          await updateDoc(doc(db, "catalogo", outfit.id), { piezas: [...(outfit.piezas || []), ref.id] });
+          carpetasAbiertas.add(outfit.id);
+          guardarCarpetas();
+          toast(`🧩 Pieza añadida al outfit «${outfit.nombre}» ✨`);
+        } else {
+          toast("✨ ¡Prenda añadida a la vitrina!");
+        }
+      } else {
+        toast("✨ ¡Prenda añadida a la vitrina!");
+      }
     }
     cerrarModalPrenda();
   } catch (e) {
