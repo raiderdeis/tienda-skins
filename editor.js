@@ -35,6 +35,7 @@ let imagenPendiente = null;
 let visorModal = null;
 let listenerCatalogo = null;
 let piezasSeleccionadas = new Set();
+let tokenVista = 0;
 
 function esAsistente(usuario) {
   return !!(usuario && usuario.email && usuario.email.toLowerCase().includes("@asistentes"));
@@ -99,6 +100,55 @@ function textoMonedas(total, monedas) {
   const partes = desglose(total, monedas).map(p => `${p.cant} ${p.moneda.nombre}`);
   if (partes.length === 1) return partes[0];
   return partes.slice(0, -1).join(", ") + " y " + partes[partes.length - 1];
+}
+
+/* ---------- 🩹 análisis de skins (arreglo de píxeles) ---------- */
+function analizarSkin(dataUrl) {
+  return new Promise((resolver) => {
+    const img = new Image();
+    img.onload = () => {
+      const ancho = img.width, alto = img.height;
+      const escala = ancho / 64;
+      const valida = Number.isInteger(escala) && escala >= 1;
+      let lienzo = null, ctx = null, legado = false;
+
+      if (valida && ancho === alto * 2) {
+        legado = true;
+        lienzo = document.createElement("canvas");
+        lienzo.width = ancho;
+        lienzo.height = alto * 2;
+        ctx = lienzo.getContext("2d");
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 0, 16 * escala, 16 * escala, 16 * escala, 16 * escala, 48 * escala, 16 * escala, 16 * escala);
+        ctx.drawImage(img, 40 * escala, 16 * escala, 16 * escala, 16 * escala, 32 * escala, 48 * escala, 16 * escala, 16 * escala);
+      } else if (valida && ancho === alto) {
+        lienzo = document.createElement("canvas");
+        lienzo.width = ancho;
+        lienzo.height = alto;
+        ctx = lienzo.getContext("2d");
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(img, 0, 0);
+      } else {
+        resolver({ imagen: dataUrl, slim: false, legado: false, formatoRaro: true });
+        return;
+      }
+
+      const t = escala;
+      const vacio = (x, y) => {
+        try { return ctx.getImageData(Math.round(x * t), Math.round(y * t), 1, 1).data[3] === 0; }
+        catch (e) { return false; }
+      };
+      const slim = vacio(50, 16) && vacio(54, 20) && vacio(42, 48) && vacio(46, 52);
+
+      resolver({
+        imagen: legado ? lienzo.toDataURL("image/png") : dataUrl,
+        slim, legado, formatoRaro: false
+      });
+    };
+    img.onerror = () => resolver({ imagen: dataUrl, slim: false, legado: false, formatoRaro: true });
+    img.src = dataUrl;
+  });
 }
 
 /* ---------- login ---------- */
@@ -244,6 +294,7 @@ function pintarCatalogo() {
   const cont = $("#lista-editor");
   cont.querySelectorAll(".escenario").forEach(caja => {
     observador.unobserve(caja);
+    caja._destruido = true;
     if (caja._visor) { try { caja._visor.dispose(); } catch (e) {} caja._visor = null; }
   });
   cont.innerHTML = "";
@@ -296,15 +347,21 @@ function pintarCatalogo() {
   observarLista();
 }
 
-/* ---------- visores 3D de la lista ---------- */
+/* ---------- visores 3D de la lista (con análisis de skin) ---------- */
 const observador = new IntersectionObserver((entradas) => {
   entradas.forEach(en => {
     const caja = en.target;
     if (en.isIntersecting) {
-      if (!caja._visor) caja._visor = crearVisorLista(caja);
-      if (caja._visor) caja._visor.renderPaused = false;
-    } else if (caja._visor) {
-      caja._visor.renderPaused = true;
+      caja._visible = true;
+      if (!caja._visor && !caja._cargando) {
+        caja._cargando = true;
+        crearVisorLista(caja);
+      } else if (caja._visor) {
+        caja._visor.renderPaused = false;
+      }
+    } else {
+      caja._visible = false;
+      if (caja._visor) caja._visor.renderPaused = true;
     }
   });
 }, { rootMargin: "150px" });
@@ -318,33 +375,38 @@ function observarLista() {
 function crearVisorLista(caja) {
   const p = crudos.find(x => x.id === caja.dataset.id);
   if (!p || !p.imagen || typeof skinview3d === "undefined") {
+    caja._cargando = false;
     const div = document.createElement("div");
     div.className = "piel-error";
     div.textContent = "🖼️ Sin imagen";
     caja.appendChild(div);
-    return null;
+    return;
   }
   const canvas = document.createElement("canvas");
   caja.appendChild(canvas);
-  try {
-    const visor = new skinview3d.SkinViewer({
-      canvas: canvas,
-      width: caja.clientWidth || 160,
-      height: caja.clientHeight || 150
-    });
-    const carga = p.slim ? visor.loadSkin(p.imagen, { model: "slim" }) : visor.loadSkin(p.imagen);
-    if (carga && carga.catch) carga.catch(() => {});
-    try { visor.controls.enableZoom = false; visor.controls.enablePan = false; } catch (e) {}
-    let girando = true;
-    canvas.addEventListener("pointerdown", () => { girando = false; });
-    (function girar() {
-      if (girando && visor.player) visor.player.rotation.y += 0.011;
-      requestAnimationFrame(girar);
-    })();
-    return visor;
-  } catch (e) {
-    return null;
-  }
+  analizarSkin(p.imagen).then(analisis => {
+    caja._cargando = false;
+    if (caja._destruido || !caja.isConnected) return;
+    try {
+      const visor = new skinview3d.SkinViewer({
+        canvas: canvas,
+        width: caja.clientWidth || 160,
+        height: caja.clientHeight || 150
+      });
+      const carga = p.slim ? visor.loadSkin(analisis.imagen, { model: "slim" }) : visor.loadSkin(analisis.imagen);
+      if (carga && carga.catch) carga.catch(() => {});
+      try { visor.controls.enableZoom = false; visor.controls.enablePan = false; } catch (e) {}
+      caja._visor = visor;
+      if (!caja._visible) visor.renderPaused = true;
+      let girando = true;
+      canvas.addEventListener("pointerdown", () => { girando = false; });
+      (function girar() {
+        if (!caja.isConnected) return;
+        if (girando && visor.player && !visor.renderPaused) visor.player.rotation.y += 0.011;
+        requestAnimationFrame(girar);
+      })();
+    } catch (e) {}
+  });
 }
 
 /* ---------- mover y borrar ---------- */
@@ -380,6 +442,30 @@ async function borrarPrenda(p) {
   }
 }
 
+/* ---------- 🩹 botón de reparación de vistas ---------- */
+ $("#boton-reparar-vistas").addEventListener("click", async () => {
+  const boton = $("#boton-reparar-vistas");
+  boton.disabled = true;
+  let revisadas = 0, arregladas = 0;
+  try {
+    for (const p of crudos) {
+      if (!p.imagen) continue;
+      revisadas++;
+      const a = await analizarSkin(p.imagen);
+      if (a.slim !== !!p.slim) {
+        await updateDoc(doc(db, "catalogo", p.id), { slim: a.slim });
+        arregladas++;
+      }
+    }
+    if (!revisadas) toast("Aún no hay prendas con imagen para revisar 🧵");
+    else if (!arregladas) toast(`🩹 Revisé ${revisadas} prendas: ¡todas estaban bien! ✨`);
+    else toast(`🩹 ${revisadas} revisadas — ${arregladas} ${arregladas === 1 ? "vista arreglada" : "vistas arregladas"} ✨ (las skins de formato antiguo ya se arreglan solas al mostrarse)`);
+  } catch (e) {
+    toast("⚠️ " + (e.message || e));
+  }
+  boton.disabled = false;
+});
+
 /* ---------- modal de prenda ---------- */
 function abrirModalPrenda(p) {
   editandoId = p ? p.id : null;
@@ -401,9 +487,23 @@ function abrirModalPrenda(p) {
   recargarVisor();
   pintarListaPiezas();
   actualizarPreviaPrecio();
+
+  // si es una prenda existente, revisar si su modelo Steve/Alex estaba mal anotado
+  if (p && p.imagen) {
+    analizarSkin(p.imagen).then(a => {
+      if (editandoId !== p.id || $("#velo-prenda").hidden) return;
+      if ($("#prenda-slim").checked !== a.slim) {
+        $("#prenda-slim").checked = a.slim;
+        recargarVisor();
+        toast(`🔍 Esta skin es modelo ${a.slim ? "Alex (brazos finos)" : "Steve"} — casilla ajustada, ¡guarda para arreglarla! 💾`);
+      }
+      if (a.legado) toast("🧵 Esta skin era de formato antiguo: en la tienda ya se ve bien 🎉");
+    });
+  }
 }
 
 function cerrarModalPrenda() {
+  tokenVista++;
   $("#velo-prenda").hidden = true;
   if (visorModal) { try { visorModal.dispose(); } catch (e) {} visorModal = null; }
   $("#vista-prenda").innerHTML = "";
@@ -426,30 +526,36 @@ function actualizarZonaTexto() {
 
 function recargarVisor() {
   const caja = $("#vista-prenda");
+  tokenVista++;
   if (visorModal) { try { visorModal.dispose(); } catch (e) {} visorModal = null; }
   caja.innerHTML = "";
   if (!imagenPendiente || typeof skinview3d === "undefined") return;
   const canvas = document.createElement("canvas");
   caja.appendChild(canvas);
-  try {
-    visorModal = new skinview3d.SkinViewer({
-      canvas: canvas,
-      width: caja.clientWidth || 280,
-      height: caja.clientHeight || 150
-    });
-    const slim = $("#prenda-slim").checked;
-    const carga = slim
-      ? visorModal.loadSkin(imagenPendiente, { model: "slim" })
-      : visorModal.loadSkin(imagenPendiente);
-    if (carga && carga.catch) carga.catch(() => toast("⚠️ No pude mostrar esa imagen…"));
-    try { visorModal.controls.enableZoom = false; visorModal.controls.enablePan = false; } catch (e) {}
-    let girando = true;
-    canvas.addEventListener("pointerdown", () => { girando = false; });
-    (function girar() {
-      if (girando && visorModal && visorModal.player) visorModal.player.rotation.y += 0.011;
-      requestAnimationFrame(girar);
-    })();
-  } catch (e) {}
+  const miToken = tokenVista;
+  analizarSkin(imagenPendiente).then(analisis => {
+    if (miToken !== tokenVista) return;
+    try {
+      visorModal = new skinview3d.SkinViewer({
+        canvas: canvas,
+        width: caja.clientWidth || 280,
+        height: caja.clientHeight || 150
+      });
+      const slim = $("#prenda-slim").checked;
+      const carga = slim
+        ? visorModal.loadSkin(analisis.imagen, { model: "slim" })
+        : visorModal.loadSkin(analisis.imagen);
+      if (carga && carga.catch) carga.catch(() => toast("⚠️ No pude mostrar esa imagen…"));
+      try { visorModal.controls.enableZoom = false; visorModal.controls.enablePan = false; } catch (e) {}
+      let girando = true;
+      canvas.addEventListener("pointerdown", () => { girando = false; });
+      (function girar() {
+        if (miToken !== tokenVista) return;
+        if (girando && visorModal && visorModal.player) visorModal.player.rotation.y += 0.011;
+        requestAnimationFrame(girar);
+      })();
+    } catch (e) {}
+  });
 }
 
 /* ---------- lista de piezas del outfit ---------- */
@@ -519,13 +625,17 @@ function cargarArchivo(f) {
     imagenPendiente = lector.result;
     actualizarZonaTexto();
     recargarVisor();
-    const img = new Image();
-    img.onload = () => {
-      if (img.width !== img.height || img.width % 64 !== 0) {
-        toast("🤔 Esa imagen no mide como una skin (64x64, 128x128…). La acepto igual si tú quieres.");
+    // detectar solito el modelo Steve/Alex y avisar si es formato antiguo
+    analizarSkin(imagenPendiente).then(a => {
+      if ($("#velo-prenda").hidden || !imagenPendiente) return;
+      if ($("#prenda-slim").checked !== a.slim) {
+        $("#prenda-slim").checked = a.slim;
+        recargarVisor();
+        toast(`🔍 Detecté modelo ${a.slim ? "Alex (brazos finos) — casilla marcada solita ✅" : "Steve — casilla desmarcada solita ✅"}`);
       }
-    };
-    img.src = imagenPendiente;
+      if (a.legado) toast("🧵 ¡Era una skin de formato antiguo! Ya quedó arreglada la vista 🎉");
+      else if (a.formatoRaro) toast("🤔 Esa imagen no mide como una skin (64x64, 128x128…). La acepto igual si tú quieres.");
+    });
   };
   lector.readAsDataURL(f);
 }
