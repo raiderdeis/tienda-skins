@@ -249,6 +249,21 @@ body {
   box-shadow: 0 3px 6px rgba(0,0,0,.3);
   letter-spacing: 1px;
 }
+.cinta-pieza {
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  z-index: 5;
+  background: linear-gradient(180deg, #6f9ec4, #44688a);
+  color: #fff;
+  font-weight: 800;
+  font-size: .72rem;
+  padding: 4px 12px;
+  border-radius: 8px;
+  transform: rotate(-8deg);
+  box-shadow: 0 3px 6px rgba(0,0,0,.3);
+  letter-spacing: 1px;
+}
 
 .escenario {
   position: relative;
@@ -286,7 +301,7 @@ body {
   justify-content: center;
 }
 
-/* ---------- Precio en monedas / estante / piezas ---------- */
+/* ---------- Precio en monedas / maniquí / piezas ---------- */
 .precio-monedas {
   display: flex;
   gap: 6px;
@@ -641,7 +656,7 @@ body {
 
 .etiquetas-editor { font-size: .78rem; color: var(--tinta-suave); font-weight: 700; margin: 2px 0 6px; }
 
-/* lista de piezas del outfit */
+/* lista de piezas del outfit (modal) */
 .lista-piezas {
   max-height: 190px;
   overflow-y: auto;
@@ -675,6 +690,64 @@ body {
 .fila-pieza .nombre-pieza small { color: var(--tinta-suave); font-weight: 600; }
 .fila-pieza .precio-pieza { font-size: .8rem; color: var(--tinta-suave); font-weight: 700; }
 
+/* ---------- 📂 Carpetas de outfits en el catálogo del taller ---------- */
+.grupo-outfit {
+  grid-column: 1 / -1;
+  border: 3px dashed #d9c48c;
+  border-radius: 18px;
+  background: rgba(255, 248, 227, .55);
+  padding: 12px 12px 14px;
+  margin: 6px 0;
+}
+.grupo-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 0 4px;
+}
+.grupo-titulo {
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  color: var(--tinta-media);
+  font-size: .98rem;
+}
+.grupo-outfit .rejilla { margin: 0; }
+
+.tarjeta-outfit {
+  border-color: #a5793c;
+  background: linear-gradient(180deg, #fffdf2, #f6ecd2);
+  box-shadow: 0 5px 14px rgba(90,60,20,.26);
+}
+.tarjeta-pieza {
+  background: linear-gradient(180deg, #fbf7ec, #f3ecd8);
+}
+
+.tarjeta-anadir-pieza {
+  font: inherit;
+  border: 3px dashed var(--oro-oscuro);
+  background: #fffdf3;
+  color: var(--tinta-suave);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 230px;
+  font-weight: 700;
+  font-size: .95rem;
+  line-height: 1.5;
+}
+.tarjeta-anadir-pieza:hover {
+  transform: translateY(-3px);
+  border-color: var(--verde);
+  color: #2e5620;
+  background: #f7f9ec;
+}
+.anadir-pieza-texto { font-size: 1.6rem; font-weight: 800; }
+.anadir-pieza-texto span { font-size: .95rem; }
+
 /* ---------- Animaciones ---------- */
 @keyframes aparecer { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes flotar { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
@@ -690,4 +763,6 @@ body {
   .cuerda { display: none; }
   .leyenda-monedas { font-size: .78rem; }
   .fila-moneda { grid-template-columns: 54px 1fr 84px 38px; }
+  .grupo-outfit { padding: 8px 8px 10px; }
+  .tarjeta-anadir-pieza { min-height: 190px; }
 }
